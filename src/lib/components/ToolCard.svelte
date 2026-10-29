@@ -171,7 +171,7 @@
     font-size: 12.5px;
   }
   .head:hover {
-    background: #131926;
+    background: var(--hover);
   }
   .icon {
     opacity: 0.85;
@@ -243,7 +243,7 @@
   .args,
   .out pre {
     margin: 0;
-    background: #0c1017;
+    background: var(--code-bg);
     border: 1px solid var(--border-soft);
     border-radius: 8px;
     padding: 8px 10px;
@@ -274,7 +274,7 @@
     border-radius: 8px;
     border: 1px solid var(--border-soft);
     cursor: zoom-in;
-    background: #0c1017;
+    background: var(--code-bg);
   }
   .revertrow {
     display: flex;
@@ -294,7 +294,7 @@
     color: var(--text-faint);
   }
   .diff {
-    background: #0c1017;
+    background: var(--code-bg);
     border: 1px solid var(--border-soft);
     border-radius: 8px;
     overflow: auto;

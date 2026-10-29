@@ -86,8 +86,8 @@
     width: 24px;
     height: 24px;
     border-radius: 8px;
-    background: linear-gradient(135deg, #3d6fd6, #8b5cf6);
-    color: #fff;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    color: var(--accent-ink, #fff);
     font-size: 12px;
     display: flex;
     align-items: center;
@@ -117,7 +117,7 @@
   }
   .bubble {
     max-width: min(72ch, 82%);
-    background: #1b2333;
+    background: var(--bubble);
     border: 1px solid #263149;
     border-radius: 14px 14px 4px 14px;
     padding: 8px 13px;

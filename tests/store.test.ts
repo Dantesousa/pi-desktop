@@ -243,6 +243,32 @@ describe("in-app dialogs", () => {
   });
 });
 
+describe("themes", () => {
+  it("applies the preset and a custom accent on the root element", () => {
+    app.setTheme("hacker");
+    expect(document.documentElement.dataset.theme).toBe("hacker");
+
+    app.setAccent("#ff2e97");
+    expect(document.documentElement.style.getPropertyValue("--accent")).toBe("#ff2e97");
+    expect(document.documentElement.style.getPropertyValue("--accent-2")).toMatch(/^#[0-9a-f]{6}$/i);
+
+    app.setAccent("");
+    expect(document.documentElement.style.getPropertyValue("--accent")).toBe("");
+  });
+
+  it("controls the chat font size", () => {
+    app.setChatFont(16);
+    expect(document.documentElement.style.getPropertyValue("--chat-font")).toBe("16px");
+    app.setChatFont(14);
+  });
+
+  it("derives a readable ink for light and dark accents", async () => {
+    const { accentVariant } = await import("../src/lib/store.svelte");
+    expect(accentVariant("#39ff14")).toMatch(/^#[0-9a-f]{6}$/i);
+    expect(accentVariant("not-a-color")).toBe("not-a-color");
+  });
+});
+
 describe("run lifecycle", () => {
   it("flips working off when the agent settles", () => {
     const tab = freshTab();

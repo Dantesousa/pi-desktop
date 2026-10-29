@@ -22,6 +22,79 @@ export type UiRequest = {
 
 export type Toast = { id: string; text: string; kind: "info" | "warn" | "error" | "ok" };
 
+export type ThemePreset = { id: string; name: string; colors: [string, string, string] };
+
+export const THEMES: ThemePreset[] = [
+  { id: "midnight", name: "Meia-noite", colors: ["#0b0d12", "#7aa2f7", "#7ee787"] },
+  { id: "amoled", name: "AMOLED", colors: ["#000000", "#8ab4ff", "#7ee787"] },
+  { id: "hacker", name: "Hacker", colors: ["#03070a", "#39ff14", "#00ffa3"] },
+  { id: "dracula", name: "Dracula", colors: ["#282a36", "#bd93f9", "#50fa7b"] },
+  { id: "nord", name: "Nord", colors: ["#2e3440", "#88c0d0", "#a3be8c"] },
+  { id: "gruvbox", name: "Gruvbox", colors: ["#282828", "#fabd2f", "#b8bb26"] },
+  { id: "catppuccin", name: "Catppuccin", colors: ["#1e1e2e", "#89b4fa", "#a6e3a1"] },
+  { id: "tokyo", name: "Tokyo Night", colors: ["#1a1b26", "#7aa2f7", "#bb9af7"] },
+  { id: "cyberpunk", name: "Cyberpunk", colors: ["#0a0512", "#ff2e97", "#00e5ff"] },
+  { id: "light", name: "Claro", colors: ["#ffffff", "#2f62d8", "#1a7f37"] },
+];
+
+function rgbToHsl(r: number, g: number, b: number): [number, number, number] {
+  r /= 255;
+  g /= 255;
+  b /= 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  if (max === min) return [0, 0, l * 100];
+  const d = max - min;
+  const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+  let h = 0;
+  if (max === r) h = ((g - b) / d + (g < b ? 6 : 0)) / 6;
+  else if (max === g) h = ((b - r) / d + 2) / 6;
+  else h = ((r - g) / d + 4) / 6;
+  return [h * 360, s * 100, l * 100];
+}
+
+function hslToHex(h: number, s: number, l: number): string {
+  const c = (1 - Math.abs(2 * (l / 100) - 1)) * (s / 100);
+  const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+  const m = l / 100 - c / 2;
+  const seg = Math.floor(((h % 360) + 360) % 360 / 60);
+  const rgb = [
+    [c, x, 0],
+    [x, c, 0],
+    [0, c, x],
+    [0, x, c],
+    [x, 0, c],
+    [c, 0, x],
+  ][seg % 6];
+  const hex = rgb
+    .map((v) => Math.round((v + m) * 255).toString(16).padStart(2, "0"))
+    .join("");
+  return `#${hex}`;
+}
+
+/** Derives the secondary accent (hue shift + a bit lighter). */
+function contrastInk(hex: string): string {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
+  if (!m) return "#ffffff";
+  const n = parseInt(m[1], 16);
+  const toLin = (v: number) => {
+    const c = v / 255;
+    return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  };
+  const lum =
+    0.2126 * toLin((n >> 16) & 255) + 0.7152 * toLin((n >> 8) & 255) + 0.0722 * toLin(n & 255);
+  return lum > 0.45 ? "#0b0d12" : "#ffffff";
+}
+
+export function accentVariant(hex: string): string {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
+  if (!m) return hex;
+  const n = parseInt(m[1], 16);
+  const [h, s, l] = rgbToHsl((n >> 16) & 255, (n >> 8) & 255, n & 255);
+  return hslToHex((h + 28) % 360, Math.min(100, s * 0.9 + 12), Math.min(80, l + 12));
+}
+
 export type DialogState = {
   kind: "confirm" | "prompt";
   title: string;
@@ -177,7 +250,9 @@ class AppState {
   appVersion = $state("0.1.1");
   gateMode = $state(localStorage.getItem("pi.gate") || "dangerous");
   costLimit = $state(Number(localStorage.getItem("pi.costLimit") || "0"));
-  theme = $state(localStorage.getItem("pi.theme") || "dark");
+  theme = $state(localStorage.getItem("pi.theme") || "midnight");
+  accent = $state(localStorage.getItem("pi.accent") || "");
+  chatFont = $state(Number(localStorage.getItem("pi.chatFont") || "14"));
   thinking = $state(localStorage.getItem("pi.thinking") || "medium");
 
   private listeners: UnlistenFn[] = [];
@@ -287,6 +362,11 @@ class AppState {
   async boot() {
     if (this.booted) return;
     this.booted = true;
+    const urlTheme = new URLSearchParams(location.search).get("theme");
+    if (urlTheme && THEMES.some((t) => t.id === urlTheme)) {
+      this.theme = urlTheme;
+      localStorage.setItem("pi.theme", urlTheme);
+    }
     this.applyTheme();
     this.bin = await api.resolveBin();
     try {
@@ -459,7 +539,33 @@ class AppState {
   }
 
   private applyTheme() {
-    document.documentElement.dataset.theme = this.theme;
+    const root = document.documentElement;
+    root.dataset.theme = this.theme;
+    const accent = this.accent.trim();
+    if (accent) {
+      root.style.setProperty("--accent", accent);
+      root.style.setProperty("--accent-2", accentVariant(accent));
+    } else {
+      root.style.removeProperty("--accent");
+      root.style.removeProperty("--accent-2");
+    }
+    root.style.setProperty("--chat-font", `${this.chatFont}px`);
+    // readable text on top of the accent (buttons, avatar, logo)
+    const effective =
+      accent || getComputedStyle(root).getPropertyValue("--accent").trim() || "#7aa2f7";
+    root.style.setProperty("--accent-ink", contrastInk(effective));
+  }
+
+  setAccent(hex: string) {
+    this.accent = hex;
+    localStorage.setItem("pi.accent", hex);
+    this.applyTheme();
+  }
+
+  setChatFont(size: number) {
+    this.chatFont = size;
+    localStorage.setItem("pi.chatFont", String(size));
+    this.applyTheme();
   }
 
   // ── rpc plumbing ──────────────────────────────────────────────────────

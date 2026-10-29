@@ -116,7 +116,7 @@
     line-height: 1;
   }
   .x:hover {
-    background: #2a2030;
+    background: var(--bubble);
     color: var(--red);
   }
   .add {

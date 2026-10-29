@@ -1,6 +1,6 @@
 <script lang="ts">
   import { open } from "@tauri-apps/plugin-dialog";
-  import { app } from "../store.svelte";
+  import { app, THEMES } from "../store.svelte";
 
   type Item = { id: string; label: string; hint?: string; group: string; run: () => void | Promise<void> };
 
@@ -42,10 +42,19 @@
       },
       {
         id: "theme",
-        label: `Tema: ${app.theme === "dark" ? "escuro" : "claro"} → trocar`,
+        label: `Tema: ${THEMES.find((t) => t.id === app.theme)?.name ?? app.theme} → próximo`,
         group: "ação",
-        run: () => app.setTheme(app.theme === "dark" ? "light" : "dark"),
+        run: () => {
+          const i = THEMES.findIndex((t) => t.id === app.theme);
+          app.setTheme(THEMES[(i + 1) % THEMES.length].id);
+        },
       },
+      ...THEMES.map((t) => ({
+        id: `theme:${t.id}`,
+        label: `Tema: ${t.name}`,
+        group: "tema",
+        run: () => app.setTheme(t.id),
+      })),
       {
         id: "project",
         label: "Trocar projeto (cwd)…",

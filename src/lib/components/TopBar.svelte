@@ -1,10 +1,12 @@
 <script lang="ts">
   import { open } from "@tauri-apps/plugin-dialog";
-  import { app } from "../store.svelte";
+  import { app, THEMES } from "../store.svelte";
   import { api } from "../api";
 
   const THINKING = ["off", "minimal", "low", "medium", "high", "xhigh", "max"];
-  let showSettings = $state(false);
+  let showSettings = $state(
+    typeof location !== "undefined" && new URLSearchParams(location.search).get("settings") === "1",
+  );
   let piVersion = $state<any>(null);
   let updating = $state(false);
 
@@ -153,13 +155,49 @@
           onchange={(e) => app.setCostLimit(Number((e.target as HTMLInputElement).value))}
         />
       </label>
-      <label>
-        <span>Tema</span>
-        <select value={app.theme} onchange={(e) => app.setTheme((e.target as HTMLSelectElement).value)}>
-          <option value="dark">escuro</option>
-          <option value="light">claro</option>
-        </select>
-      </label>
+      <div class="themes">
+        <span class="lbl">tema</span>
+        <div class="grid">
+          {#each THEMES as t}
+            <button
+              class="sw"
+              class:active={app.theme === t.id}
+              title={t.name}
+              onclick={() => app.setTheme(t.id)}
+            >
+              <span class="dots">
+                <i style={`background:${t.colors[0]}`}></i>
+                <i style={`background:${t.colors[1]}`}></i>
+                <i style={`background:${t.colors[2]}`}></i>
+              </span>
+              <span class="nm">{t.name}</span>
+            </button>
+          {/each}
+        </div>
+      </div>
+      <div class="row2">
+        <label class="accent">
+          <span>destaque</span>
+          <input
+            type="color"
+            value={app.accent || "#7aa2f7"}
+            oninput={(e) => app.setAccent((e.target as HTMLInputElement).value)}
+          />
+        </label>
+        <button class="mini" onclick={() => app.setAccent("")} title="voltar à cor do tema">auto</button>
+        <label class="fontsel">
+          <span>texto</span>
+          <select
+            value={String(app.chatFont)}
+            onchange={(e) => app.setChatFont(Number((e.target as HTMLSelectElement).value))}
+          >
+            <option value="13">13px</option>
+            <option value="14">14px</option>
+            <option value="15">15px</option>
+            <option value="16">16px</option>
+          </select>
+        </label>
+      </div>
       <label>
         <span>Projeto</span>
         <input value={app.cwd} readonly />
@@ -242,6 +280,9 @@
     min-width: 0;
     overflow: hidden;
   }
+  .controls button.ghost {
+    color: var(--text-dim);
+  }
   select {
     padding: 4px 7px;
     font-size: 11.5px;
@@ -272,7 +313,7 @@
   }
   .fill {
     height: 100%;
-    background: linear-gradient(90deg, #4f8cf7, #7aa2f7);
+    background: linear-gradient(90deg, var(--accent), var(--accent-2));
     transition: width 0.3s;
   }
   .fill.hot {
@@ -304,7 +345,9 @@
     position: absolute;
     top: 46px;
     right: 14px;
-    width: 320px;
+    width: 344px;
+    max-height: calc(100vh - 70px);
+    overflow-y: auto;
     background: var(--panel);
     border: 1px solid #2b3550;
     border-radius: 12px;
@@ -332,6 +375,69 @@
     gap: 7px;
     justify-content: flex-end;
     margin-top: 2px;
+  }
+  .themes {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .lbl {
+    font-size: 10.5px;
+    color: var(--text-faint);
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 4px;
+  }
+  .sw {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 5px 7px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    font-size: 11px;
+    text-align: left;
+    min-width: 0;
+  }
+  .sw:hover {
+    background: var(--panel-2);
+  }
+  .sw.active {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent) inset;
+  }
+  .dots {
+    display: flex;
+    gap: 2px;
+    flex: 0 0 auto;
+  }
+  .dots i {
+    width: 8px;
+    height: 14px;
+    border-radius: 3px;
+    display: block;
+  }
+  .nm {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .row2 {
+    display: flex;
+    align-items: flex-end;
+    gap: 7px;
+  }
+  .row2 .accent,
+  .row2 .fontsel {
+    flex: 1;
+  }
+  .row2 input[type="color"] {
+    width: 100%;
+    height: 26px;
+    padding: 2px;
+    background: var(--bg-2);
   }
   .piver {
     display: flex;

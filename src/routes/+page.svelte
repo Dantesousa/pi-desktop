@@ -183,12 +183,12 @@
     width: 54px;
     height: 54px;
     border-radius: 16px;
-    background: linear-gradient(135deg, #3d6fd6, #8b5cf6);
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 26px;
-    color: #fff;
+    color: var(--accent-ink, #fff);
     margin-bottom: 6px;
     box-shadow: 0 8px 40px rgba(93, 122, 224, 0.35);
   }

@@ -49,7 +49,8 @@ It does not reimplement the agent: it spawns `pi --mode rpc` as a sidecar and sp
 - **MCP manager**: list / enable / disable / add servers in `~/.pi/agent/mcp.json`, and test connections
 - Tray icon, close-to-tray, global quick-ask (`Ctrl+Alt+H`), and a diagnostics dump (`Ctrl+Shift+D`) that writes the full UI state to `~/.cache/pi-desktop/diagnostics/`
 - Desktop notification when a long task finishes while the window is unfocused
-- Command palette (`Ctrl+K`), light/dark themes, HTML export
+- Command palette (`Ctrl+K`), HTML export
+- **10 built-in themes** (Midnight, AMOLED, Hacker, Dracula, Nord, Gruvbox, Catppuccin, Tokyo Night, Cyberpunk, Light) plus a custom accent colour, automatic contrast ink on buttons, and a chat font-size control. Preview any theme with `?theme=<id>`, switch from the palette or the settings popover
 - **Pi self-update**: check the latest version and update the sidecar from the settings popover
 
 ## Requirements

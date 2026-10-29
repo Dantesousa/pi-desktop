@@ -133,12 +133,12 @@
     width: 30px;
     height: 30px;
     border-radius: 9px;
-    background: linear-gradient(135deg, #3d6fd6, #8b5cf6);
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 15px;
-    color: #fff;
+    color: var(--accent-ink, #fff);
   }
   .name {
     font-weight: 700;
@@ -156,6 +156,7 @@
     margin: 0 2px;
   }
   .filter {
+    color: var(--text);
     font-size: 11.5px;
     padding: 5px 8px;
     background: var(--bg);
@@ -179,7 +180,7 @@
     background: var(--panel);
   }
   .row.active {
-    background: #1b2333;
+    background: var(--bubble);
     box-shadow: inset 2px 0 0 var(--accent);
   }
   .row.pinned .nm {
@@ -259,7 +260,8 @@
   .foot button {
     flex: 1 1 0;
     min-width: 0;
-    font-size: 11px;
+    color: var(--text-dim);
+    font-size: 11.5px;
     padding: 5px 4px;
     white-space: nowrap;
     overflow: hidden;
