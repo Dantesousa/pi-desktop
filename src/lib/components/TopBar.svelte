@@ -188,6 +188,8 @@
     display: flex;
     align-items: center;
     gap: 14px;
+    min-width: 0;
+    overflow: visible;
     padding: 9px 18px;
     border-bottom: 1px solid var(--border-soft);
     background: var(--bg-2);
@@ -236,12 +238,25 @@
     display: flex;
     align-items: center;
     gap: 8px;
+    flex: 0 1 auto;
+    min-width: 0;
+    overflow: hidden;
   }
   select {
     padding: 4px 7px;
     font-size: 11.5px;
-    max-width: 220px;
+    max-width: 200px;
+    min-width: 0;
     background: var(--panel);
+  }
+  @media (max-width: 1280px) {
+    .cost,
+    .queue {
+      display: none;
+    }
+    select {
+      max-width: 165px;
+    }
   }
   .meter {
     display: flex;

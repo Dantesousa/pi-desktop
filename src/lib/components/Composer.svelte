@@ -148,11 +148,16 @@
 
 <style>
   .composer {
+    width: 100%;
+    box-sizing: border-box;
+    flex: 0 0 auto;
     padding: 10px 22px 16px;
     border-top: 1px solid var(--border-soft);
     background: linear-gradient(180deg, rgba(11, 13, 18, 0.4), var(--bg));
   }
   .box {
+    width: 100%;
+    box-sizing: border-box;
     border: 1px solid var(--border);
     background: var(--panel);
     border-radius: 14px;
@@ -174,6 +179,7 @@
     border: none;
   }
   .actions {
+    width: 100%;
     display: flex;
     align-items: center;
     gap: 8px;

@@ -438,6 +438,13 @@
     gap: 2px;
     padding: 8px 8px 0;
     border-bottom: 1px solid var(--border-soft);
+    overflow-x: auto;
+    scrollbar-width: thin;
+    flex: 0 0 auto;
+  }
+  .tab {
+    white-space: nowrap;
+    flex: 0 0 auto;
   }
   .tab {
     border: none;

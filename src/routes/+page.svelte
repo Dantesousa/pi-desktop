@@ -34,6 +34,10 @@
     } else if (mod && e.key.toLowerCase() === "m") {
       e.preventDefault();
       app.showMemory = !app.showMemory;
+    } else if (mod && e.shiftKey && e.key.toLowerCase() === "r") {
+      // hard reload of the webview: discards stale HMR stylesheets
+      e.preventDefault();
+      window.location.reload();
     } else if (e.key === "F5") {
       e.preventDefault();
       app.reloadSession();
@@ -108,6 +112,7 @@
             <span>Ctrl+K comandos</span>
             <span>Ctrl+M memória</span>
             <span>Ctrl+Alt+H janela</span>
+            <span>Ctrl+Shift+R recarregar UI</span>
           </div>
         </div>
       {:else}

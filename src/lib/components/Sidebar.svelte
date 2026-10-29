@@ -254,17 +254,33 @@
     border-top: 1px solid var(--border-soft);
     padding-top: 8px;
     margin: 0 2px;
+    flex: 0 0 auto;
   }
   .foot button {
-    flex: 1;
-    font-size: 11.5px;
-    padding: 5px;
+    flex: 1 1 0;
+    min-width: 0;
+    font-size: 11px;
+    padding: 5px 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .foot button:first-child {
+    flex: 1.7 1 0;
+  }
+  .foot button:nth-child(2) {
+    flex: 1.1 1 0;
+  }
+  .foot button:last-child {
+    flex: 0 0 30px;
   }
   button.active {
     border-color: #35507f;
     background: var(--panel-2);
   }
   .conn {
+    flex: 0 0 auto;
+    padding-bottom: 2px;
     font-size: 11px;
     color: var(--text-faint);
     display: flex;
