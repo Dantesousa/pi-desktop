@@ -125,6 +125,11 @@ npm run tauri build
 
 Artifacts land in `src-tauri/target/release/bundle/` (`appimage/` and `deb/`).
 
+`npm run dist` is the same as `npm run tauri build`. Note that an AppImage built on
+Ubuntu (CI) bundles Ubuntu's WebKitGTK without its ICU dependency and will only start
+on Debian-derived systems; a build made on your own distro (`npm run dist`) bundles
+everything and runs elsewhere — that is why the release ships both.
+
 Pushing a `v*` tag makes `.github/workflows/release.yml` build both bundles on
 Ubuntu 24.04 and attach them to a GitHub release:
 
