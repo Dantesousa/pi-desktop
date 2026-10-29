@@ -1,9 +1,39 @@
 <script lang="ts">
   import { open } from "@tauri-apps/plugin-dialog";
   import { app } from "../store.svelte";
+  import { api } from "../api";
 
   const THINKING = ["off", "minimal", "low", "medium", "high", "xhigh", "max"];
   let showSettings = $state(false);
+  let piVersion = $state<any>(null);
+  let updating = $state(false);
+
+  async function checkPi() {
+    try {
+      piVersion = await api.piVersion();
+      if (piVersion.hasUpdate) {
+        app.toast(`pi ${piVersion.latest} disponível (atual ${piVersion.current})`, "warn");
+      } else {
+        app.toast(`pi ${piVersion.current} — já está atualizado`, "ok");
+      }
+    } catch (e: any) {
+      app.toast(`verificação falhou: ${e?.message ?? e}`, "error");
+    }
+  }
+
+  async function updatePi() {
+    updating = true;
+    try {
+      const out = await api.piSelfUpdate();
+      app.toast(`pi atualizado: ${out.split("\n").slice(-2).join(" ").slice(0, 160)}`, "ok");
+      piVersion = await api.piVersion();
+      await app.connect();
+    } catch (e: any) {
+      app.toast(`update falhou: ${e?.message ?? e}`, "error");
+    } finally {
+      updating = false;
+    }
+  }
 
   const grouped = $derived.by(() => {
     const map = new Map<string, any[]>();
@@ -137,6 +167,13 @@
         <span>bin</span>
         <input value={app.bin} readonly />
       </label>
+      <div class="piver">
+        <span class="faint">pi {piVersion?.current ?? "—"}{piVersion?.latest ? ` · latest ${piVersion.latest}` : ""}</span>
+        <button class="mini" onclick={checkPi} disabled={updating}>verificar</button>
+        <button class="mini" onclick={updatePi} disabled={updating}>
+          {updating ? "atualizando…" : "atualizar"}
+        </button>
+      </div>
       <div class="foot">
         <button onclick={() => app.connect()}>reconectar</button>
         <button onclick={() => (showSettings = false)}>fechar</button>
@@ -279,5 +316,22 @@
     gap: 7px;
     justify-content: flex-end;
     margin-top: 2px;
+  }
+  .piver {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10.5px;
+    border-top: 1px solid var(--border-soft);
+    padding-top: 8px;
+    flex-wrap: wrap;
+  }
+  .piver .faint {
+    flex: 1;
+    font-family: var(--mono);
+  }
+  .mini {
+    font-size: 10.5px;
+    padding: 2px 7px;
   }
 </style>

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { lineDiff, addedOnly } from "../diff";
+  import { app } from "../store.svelte";
 
   let { part }: { part: any } = $props();
   let open = $state(false);
@@ -85,6 +86,17 @@
 
   {#if open}
     <div class="body">
+      {#if part.snap?.canRestore}
+        <div class="revertrow">
+          {#if part.reverted}
+            <span class="reverted">↺ revertido</span>
+          {:else}
+            <button class="mini revert" onclick={() => app.revertPart(part)}>
+              ↺ reverter {part.snap.exists ? "edições" : "(arquivo novo)"}
+            </button>
+          {/if}
+        </div>
+      {/if}
       {#each diffs as d}
         <div class="difflabel">{d.path ?? "diff"}</div>
         <div class="diff">
@@ -237,6 +249,23 @@
     padding: 1px 6px;
     font-size: 10px;
     border-radius: 5px;
+  }
+  .revertrow {
+    display: flex;
+    justify-content: flex-end;
+    padding-top: 7px;
+  }
+  .revert {
+    border-color: #5a4a2a;
+    color: #e8d18a;
+  }
+  .revert:hover {
+    background: #2a2415;
+    border-color: #7a6435;
+  }
+  .reverted {
+    font-size: 10.5px;
+    color: var(--text-faint);
   }
   .diff {
     background: #0c1017;

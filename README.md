@@ -20,11 +20,13 @@ It does not reimplement the agent: it spawns `pi --mode rpc` as a sidecar and sp
 - Send **images** (paste with `Ctrl+V`, drag & drop, or 📎) — encoded as base64 and sent through the RPC `images` field
 - Send **documents**: text files are inlined, binaries are staged on disk for the agent to open with its own tools
 - **Diff viewer** for `edit` / `write` tool calls (LCS line diff, collapsed context)
+- **Undo a file change** straight from the diff card: a snapshot is taken before the tool runs, so "revert" restores the previous content (or removes a newly created file)
 - Send button becomes **stop** as soon as a run is active; `Esc` aborts
 - Slash-command autocomplete from `get_commands` (extension commands, prompt templates, skills)
 
 **Parallel sessions (tabs)**
 - Each tab is an independent `pi` process — separate session, model, thinking level, context and cost
+- Tabs are named after their project folder; double-click to rename
 - `Ctrl+T` new tab · `Ctrl+W` close · click to switch
 
 **Sessions**
@@ -47,6 +49,7 @@ It does not reimplement the agent: it spawns `pi --mode rpc` as a sidecar and sp
 - Tray icon, close-to-tray, global quick-ask (`Ctrl+Alt+H`)
 - Desktop notification when a long task finishes while the window is unfocused
 - Command palette (`Ctrl+K`), light/dark themes, HTML export
+- **Pi self-update**: check the latest version and update the sidecar from the settings popover
 
 ## Requirements
 
@@ -84,6 +87,20 @@ npm run tauri build
 ```
 
 Artifacts land in `src-tauri/target/release/bundle/` (`appimage/` and `deb/`).
+
+Pushing a `v*` tag makes `.github/workflows/release.yml` build both bundles on
+Ubuntu 24.04 and attach them to a GitHub release:
+
+```bash
+git tag v0.1.2 && git push origin v0.1.2
+```
+
+## Development notes
+
+- Use `npm run dev:clean` instead of `npm run tauri dev`: it frees a stale
+  listener on port 1420 first (an orphan Vite from an earlier session otherwise
+  makes `beforeDevCommand` fail and takes the app down with it).
+- Rust panics are appended to `~/.cache/pi-desktop/crash.log`.
 
 ## Environment variables
 

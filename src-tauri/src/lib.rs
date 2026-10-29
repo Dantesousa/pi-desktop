@@ -1,6 +1,7 @@
 //! Pi Desktop — native shell around the Pi coding agent.
 
 mod attachments;
+mod files;
 mod mcp;
 mod memory;
 mod pi;
@@ -44,6 +45,26 @@ fn pi_status(state: tauri::State<PiState>, tab: String) -> pi::PiStatus {
 #[tauri::command]
 fn pi_stop_all(state: tauri::State<PiState>) -> Result<(), String> {
     pi::stop_all(&state)
+}
+
+#[tauri::command]
+fn pi_version() -> pi::PiVersion {
+    pi::check_update()
+}
+
+#[tauri::command]
+fn pi_self_update() -> Result<String, String> {
+    pi::self_update()
+}
+
+#[tauri::command]
+fn file_snapshot(path: String) -> Result<files::FileSnapshot, String> {
+    files::snapshot(&path)
+}
+
+#[tauri::command]
+fn file_restore(path: String, content: Option<String>) -> Result<(), String> {
+    files::restore(&path, content)
 }
 
 #[tauri::command]
@@ -246,6 +267,10 @@ pub fn run() {
             pi_stop,
             pi_status,
             pi_resolve_bin,
+            pi_version,
+            pi_self_update,
+            file_snapshot,
+            file_restore,
             pi_stop_all,
             pi_permission_extension,
             memory_read,

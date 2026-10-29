@@ -328,3 +328,68 @@ pub fn status(state: &PiState, tab: &str) -> PiStatus {
         },
     }
 }
+
+// ── version / self-update ────────────────────────────────────────────────────
+
+#[derive(Serialize, Clone)]
+pub struct PiVersion {
+    pub current: String,
+    pub latest: Option<String>,
+    pub has_update: bool,
+}
+
+fn run_capture(bin: &str, args: &[&str]) -> Result<String, String> {
+    let output = Command::new(bin)
+        .args(args)
+        .output()
+        .map_err(|e| format!("falha ao rodar `{bin} {}`: {e}", args.join(" ")))?;
+    let mut text = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    let err = String::from_utf8_lossy(&output.stderr).trim().to_string();
+    if text.is_empty() {
+        text = err.clone();
+    }
+    if !output.status.success() && text.is_empty() {
+        return Err(format!("`{bin}` terminou com {:?}", output.status.code()));
+    }
+    Ok(text)
+}
+
+pub fn current_version() -> String {
+    let bin = resolve_bin();
+    run_capture(&bin, &["--version"]).unwrap_or_else(|_| "desconhecida".into())
+}
+
+fn latest_npm_version() -> Option<String> {
+    let output = Command::new("npm")
+        .args(["view", "@earendil-works/pi-coding-agent", "version", "--silent"])
+        .output()
+        .ok()?;
+    if !output.status.success() {
+        return None;
+    }
+    let text = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    if text.is_empty() {
+        None
+    } else {
+        Some(text)
+    }
+}
+
+pub fn check_update() -> PiVersion {
+    let current = current_version();
+    let latest = latest_npm_version();
+    let has_update = match latest.as_deref() {
+        Some(latest) => latest != current,
+        None => false,
+    };
+    PiVersion {
+        current,
+        latest,
+        has_update,
+    }
+}
+
+pub fn self_update() -> Result<String, String> {
+    let bin = resolve_bin();
+    run_capture(&bin, &["update", "--self", "--no-approve"])
+}

@@ -6,7 +6,19 @@
   {#each app.tabs as tab (tab.id)}
     <button class="tab" class:active={tab.id === app.activeId} onclick={() => app.activate(tab.id)} title={tab.cwd}>
       <span class="dot" class:live={tab.conn === "ready"} class:work={tab.working}></span>
-      <span class="lbl">{tab.title}</span>
+      <span
+        class="lbl"
+        role="button"
+        tabindex="-1"
+        title="duplo clique para renomear"
+        ondblclick={(e) => {
+          e.stopPropagation();
+          const name = prompt("nome da aba:", tab.title);
+          if (name != null) app.renameTab(tab.id, name);
+        }}
+        onkeydown={() => {}}
+        >{tab.title}</span
+      >
       {#if tab.working}<span class="spin"></span>{/if}
       <span
         class="x"

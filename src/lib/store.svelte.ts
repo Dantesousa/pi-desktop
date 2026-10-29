@@ -71,7 +71,7 @@ export class Tab {
 
   constructor(init: { id: string; label?: string; cwd: string; thinking?: string }) {
     this.id = init.id;
-    this.label = init.label ?? "nova";
+    this.label = init.label ?? basename(init.cwd);
     this.cwd = init.cwd;
     if (init.thinking) this.thinking = init.thinking;
   }
@@ -228,7 +228,7 @@ class AppState {
   }
 
   // ── tabs ──────────────────────────────────────────────────────────────
-  newTab(cwd = localStorage.getItem("pi.cwd") || "/home/dante", label = "nova") {
+  newTab(cwd = localStorage.getItem("pi.cwd") || "/home/dante", label?: string) {
     const tab = new Tab({ id: uid(), cwd, label, thinking: this.thinking });
     this.tabs.push(tab);
     this.activeId = tab.id;
@@ -360,6 +360,7 @@ class AppState {
 
   async setCwd(path: string) {
     const tab = this.active;
+    if (tab.label === basename(tab.cwd)) tab.label = basename(path);
     tab.cwd = path;
     localStorage.setItem("pi.cwd", path);
     await api.stop(tab.id);
@@ -665,6 +666,42 @@ class AppState {
     this.sessions = await api.sessionsList(80);
   }
 
+  renameTab(id: string, name: string) {
+    const tab = this.tabs.find((t) => t.id === id);
+    if (tab) tab.label = name.trim() || basename(tab.cwd);
+  }
+
+  // ── revert edit/write ─────────────────────────────────────────────────
+  async captureSnapshot(part: any) {
+    if (!part || part.snap || part.snapLoading) return;
+    if (part.name !== "edit" && part.name !== "write") return;
+    const path = part.args?.path;
+    if (!path) return;
+    part.snapLoading = true;
+    try {
+      part.snap = await api.fileSnapshot(path);
+    } catch {
+      /* ignore */
+    } finally {
+      part.snapLoading = false;
+    }
+  }
+
+  async revertPart(part: any) {
+    const snap = part.snap;
+    if (!snap?.canRestore) {
+      this.toast("sem snapshot deste arquivo — não dá pra reverter", "warn");
+      return;
+    }
+    try {
+      await api.fileRestore(snap.path, snap.exists ? snap.content : null);
+      part.reverted = true;
+      this.toast(`revertido: ${snap.path}`, "ok");
+    } catch (e: any) {
+      this.toast(`reverter falhou: ${e?.message ?? e}`, "error");
+    }
+  }
+
   togglePin(path: string) {
     if (this.pinned.includes(path)) this.pinned = this.pinned.filter((p) => p !== path);
     else this.pinned = [...this.pinned, path];
@@ -846,6 +883,7 @@ class AppState {
           p.id = ev.toolCall.id;
           p.name = ev.toolCall.name;
           p.args = ev.toolCall.arguments;
+          this.captureSnapshot(p);
         } else if (ev.type === "error") {
           msg.error = String(ev.error ?? ev.reason ?? "erro no stream");
         }
@@ -894,17 +932,18 @@ class AppState {
           existing.name = rec.toolName;
           existing.args = rec.args;
           existing.running = true;
+          this.captureSnapshot(existing);
         } else {
-          msg.parts.push(
-            newPart({
-              ci: 1000 + msg.parts.length,
-              kind: "tool",
-              id: rec.toolCallId,
-              name: rec.toolName,
-              args: rec.args,
-              running: true,
-            }),
-          );
+          const created = newPart({
+            ci: 1000 + msg.parts.length,
+            kind: "tool",
+            id: rec.toolCallId,
+            name: rec.toolName,
+            args: rec.args,
+            running: true,
+          }) as any;
+          msg.parts.push(created);
+          this.captureSnapshot(created);
         }
         tab.activity = `executando ${rec.toolName}…`;
         break;
@@ -1029,6 +1068,12 @@ export function langFor(name: string): string {
     c: "c",
   };
   return map[ext] ?? "";
+}
+
+export function basename(path: string): string {
+  const clean = (path ?? "").replace(/\/+$/, "");
+  const parts = clean.split("/");
+  return parts[parts.length - 1] || "/";
 }
 
 export function fmtSize(n: number): string {
