@@ -29,6 +29,7 @@ export const api = {
   status: (tab: string) => invoke<any>("pi_status", { tab }),
   resolveBin: () => invoke<string>("pi_resolve_bin"),
   permissionExtension: () => invoke<string | null>("pi_permission_extension"),
+  writeDiagnostics: (payload: string) => invoke<string>("write_diagnostics", { payload }),
   piVersion: async () => camel(await invoke<any>("pi_version")),
   piSelfUpdate: () => invoke<string>("pi_self_update"),
   fileSnapshot: async (path: string) => camel(await invoke<any>("file_snapshot", { path })),

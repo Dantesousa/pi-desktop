@@ -68,6 +68,11 @@ fn file_restore(path: String, content: Option<String>) -> Result<(), String> {
 }
 
 #[tauri::command]
+fn write_diagnostics(payload: String) -> Result<String, String> {
+    files::write_diagnostics(&payload)
+}
+
+#[tauri::command]
 fn pi_resolve_bin() -> String {
     pi::resolve_bin()
 }
@@ -267,6 +272,7 @@ pub fn run() {
             pi_stop,
             pi_status,
             pi_resolve_bin,
+            write_diagnostics,
             pi_version,
             pi_self_update,
             file_snapshot,

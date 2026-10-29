@@ -33,6 +33,9 @@
     } else if (mod && e.key.toLowerCase() === "m") {
       e.preventDefault();
       app.showMemory = !app.showMemory;
+    } else if (mod && e.shiftKey && e.key.toLowerCase() === "d") {
+      e.preventDefault();
+      app.dumpDiagnostics();
     } else if (mod && e.key.toLowerCase() === "t") {
       e.preventDefault();
       app.openTab();

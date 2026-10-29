@@ -139,3 +139,23 @@ mod tests {
         assert!(restore("relativo.txt", None).is_err());
     }
 }
+
+/// Writes a diagnostics bundle to `~/.cache/pi-desktop/diagnostics/` and returns its path.
+/// Lets the user hand the agent a complete snapshot of the UI state instead of a screenshot.
+pub fn write_diagnostics(payload: &str) -> Result<String, String> {
+    let base = std::env::var("XDG_CACHE_HOME")
+        .map(PathBuf::from)
+        .unwrap_or_else(|_| {
+            PathBuf::from(std::env::var("HOME").unwrap_or_default()).join(".cache")
+        })
+        .join("pi-desktop")
+        .join("diagnostics");
+    fs::create_dir_all(&base).map_err(|e| e.to_string())?;
+    let ts = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    let path = base.join(format!("diag-{ts}.json"));
+    fs::write(&path, payload).map_err(|e| format!("falha ao gravar diagnóstico: {e}"))?;
+    Ok(path.to_string_lossy().into_owned())
+}

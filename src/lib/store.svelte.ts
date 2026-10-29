@@ -157,6 +157,7 @@ class AppState {
   showPalette = $state(false);
   focusToken = $state(0);
   bin = $state("pi");
+  appVersion = $state("0.1.1");
   gateMode = $state(localStorage.getItem("pi.gate") || "dangerous");
   costLimit = $state(Number(localStorage.getItem("pi.costLimit") || "0"));
   theme = $state(localStorage.getItem("pi.theme") || "dark");
@@ -744,6 +745,82 @@ class AppState {
 
   async loadSkills() {
     this.skills = await api.skillsList();
+  }
+
+  /** Dumps everything an agent needs to debug the UI without a screenshot. */
+  async dumpDiagnostics() {
+    const rect = (sel: string) => {
+      const el = document.querySelector(sel) as HTMLElement | null;
+      if (!el) return null;
+      const r = el.getBoundingClientRect();
+      const cs = getComputedStyle(el);
+      return {
+        x: Math.round(r.x),
+        y: Math.round(r.y),
+        w: Math.round(r.width),
+        h: Math.round(r.height),
+        display: cs.display,
+        overflowY: cs.overflowY,
+      };
+    };
+    const tab = this.active;
+    const payload = {
+      at: new Date().toISOString(),
+      appVersion: this.appVersion,
+      conn: tab?.conn,
+      streaming: tab?.streaming,
+      working: tab?.working,
+      activity: tab?.activity,
+      model: tab?.modelLabel,
+      thinking: tab?.thinking,
+      sessionId: tab?.sessionId,
+      sessionName: tab?.sessionName,
+      cwd: tab?.cwd,
+      gateMode: this.gateMode,
+      cost: tab?.cost,
+      context: tab?.contextTokens,
+      stats: tab?.stats,
+      tabs: this.tabs.map((t) => ({
+        title: t.title,
+        cwd: t.cwd,
+        conn: t.conn,
+        working: t.working,
+        messages: t.messages.length,
+      })),
+      messages: (tab?.messages ?? []).slice(-6).map((m) => ({
+        role: m.role,
+        parts: m.parts.map((part: any) => ({
+          kind: part.kind,
+          name: part.name,
+          chars: part.text?.length ?? part.output?.length ?? 0,
+          running: part.running,
+          error: part.isError,
+        })),
+        error: m.error ?? null,
+      })),
+      layout: {
+        window: { w: window.innerWidth, h: window.innerHeight },
+        bodyScroll: document.body.scrollHeight,
+        shell: rect(".shell"),
+        sidebar: rect("aside"),
+        main: rect("main"),
+        tabs: rect(".bar"),
+        chat: rect(".chat"),
+        composer: rect(".composer"),
+        memory: rect("section"),
+      },
+      stderr: this.stderr.slice(-20),
+      toasts: this.toasts.map((t) => t.text),
+      requests: this.requests.map((r) => r.title),
+    };
+    try {
+      const path = await api.writeDiagnostics(JSON.stringify(payload, null, 2));
+      this.toast(`diagnóstico salvo em ${path}`, "ok");
+      return path;
+    } catch (e: any) {
+      this.toast(`falha ao salvar diagnóstico: ${e?.message ?? e}`, "error");
+      return null;
+    }
   }
 
   async exportHtml() {
