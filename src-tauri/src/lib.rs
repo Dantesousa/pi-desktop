@@ -177,6 +177,21 @@ fn mcp_servers() -> Vec<mcp::McpServer> {
 }
 
 #[tauri::command]
+fn browser_enable() -> Result<String, String> {
+    mcp::browser_enable()
+}
+
+#[tauri::command]
+fn browser_disable() -> Result<(), String> {
+    mcp::browser_disable()
+}
+
+#[tauri::command]
+fn browser_preview(with_image: Option<bool>) -> mcp::BrowserPreview {
+    mcp::browser_preview(with_image.unwrap_or(true))
+}
+
+#[tauri::command]
 fn hub_mcp_search(query: String, limit: Option<u32>) -> Result<Vec<hub::McpCandidate>, String> {
     hub::mcp_search(&query, limit.unwrap_or(30))
 }
@@ -343,6 +358,9 @@ pub fn run() {
             mcp_servers,
             mcp_save,
             mcp_check,
+            browser_enable,
+            browser_disable,
+            browser_preview,
             hub_mcp_search,
             hub_skills_search,
             hub_skills_in_repo,

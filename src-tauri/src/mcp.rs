@@ -129,3 +129,134 @@ pub fn check(cwd: Option<String>) -> Result<String, String> {
     }
     Ok(text)
 }
+
+// ── embedded browser (MCP server shipped with the app) ───────────────────────
+
+pub const BROWSER_SERVER: &str = "hina-browser";
+
+fn script_candidates() -> Vec<PathBuf> {
+    let mut out = Vec::new();
+    if let Ok(p) = std::env::var("PI_DESKTOP_BROWSER_MCP") {
+        out.push(PathBuf::from(p));
+    }
+    if let Ok(exe) = std::env::current_exe() {
+        // dev: <repo>/src-tauri/target/debug/pi-desktop → <repo>/scripts/browser-mcp.mjs
+        let mut dir = exe.parent().map(|p| p.to_path_buf());
+        // target/debug/deps/… in tests, target/debug/… in the app: try a few levels
+        for _ in 0..6 {
+            if let Some(d) = dir.clone() {
+                out.push(d.join("scripts/browser-mcp.mjs"));
+                dir = d.parent().map(|p| p.to_path_buf());
+            }
+        }
+    }
+    let home = std::env::var("HOME").unwrap_or_default();
+    out.push(PathBuf::from(&home).join(".cache/pi-desktop/browser/mcp.mjs"));
+    out
+}
+
+pub fn browser_script() -> Option<PathBuf> {
+    script_candidates().into_iter().find(|p| p.is_file())
+}
+
+#[derive(Serialize, Clone)]
+pub struct BrowserPreview {
+    pub enabled: bool,
+    pub script: Option<String>,
+    pub url: String,
+    pub title: String,
+    pub updated: u64,
+    pub image_b64: Option<String>,
+}
+
+fn browser_cache() -> PathBuf {
+    let base = std::env::var("XDG_CACHE_HOME")
+        .map(PathBuf::from)
+        .unwrap_or_else(|_| {
+            PathBuf::from(std::env::var("HOME").unwrap_or_default()).join(".cache")
+        });
+    base.join("pi-desktop").join("browser")
+}
+
+pub fn browser_enabled() -> bool {
+    read_config()
+        .get("mcpServers")
+        .and_then(|v| v.get(BROWSER_SERVER))
+        .is_some()
+}
+
+pub fn browser_enable() -> Result<String, String> {
+    let script = browser_script().ok_or_else(|| "scripts/browser-mcp.mjs não encontrado".to_string())?;
+    let mut config = read_config();
+    if config.get("mcpServers").is_none() {
+        config["mcpServers"] = serde_json::json!({});
+    }
+    let cwd = script
+        .parent()
+        .and_then(|p| p.parent())
+        .map(|p| p.to_string_lossy().into_owned());
+    let node_modules = cwd.as_ref().map(|c| format!("{c}/node_modules"));
+    config["mcpServers"][BROWSER_SERVER] = serde_json::json!({
+        "command": "node",
+        "args": [script.to_string_lossy()],
+        "cwd": cwd,
+        "env": node_modules.map(|n| serde_json::json!({ "NODE_PATH": n })).unwrap_or_else(|| serde_json::json!({})),
+        "description": "Navegador controlado pelo agente; o app mostra o preview ao vivo",
+    });
+    save_config(config)?;
+    Ok(script.to_string_lossy().into_owned())
+}
+
+pub fn browser_disable() -> Result<(), String> {
+    let mut config = read_config();
+    if let Some(map) = config.get_mut("mcpServers").and_then(|v| v.as_object_mut()) {
+        map.remove(BROWSER_SERVER);
+    }
+    save_config(config)
+}
+
+#[cfg(test)]
+mod browser_tests {
+    use super::*;
+
+    #[test]
+    fn browser_script_is_found_from_the_dev_binary() {
+        let found = browser_script();
+        assert!(found.is_some(), "esperava achar scripts/browser-mcp.mjs");
+        assert!(found.unwrap().ends_with("scripts/browser-mcp.mjs"));
+    }
+
+    #[test]
+    fn preview_defaults_are_sane() {
+        let p = browser_preview(false);
+        assert!(p.updated == 0 || p.updated > 1_600_000_000_000);
+    }
+}
+
+pub fn browser_preview(with_image: bool) -> BrowserPreview {
+    let dir = browser_cache();
+    let state_path = dir.join("state.json");
+    let shot_path = dir.join("latest.jpg");
+    let mut out = BrowserPreview {
+        enabled: browser_enabled(),
+        script: browser_script().map(|p| p.to_string_lossy().into_owned()),
+        url: String::new(),
+        title: String::new(),
+        updated: 0,
+        image_b64: None,
+    };
+    if let Ok(text) = fs::read_to_string(&state_path) {
+        if let Ok(json) = serde_json::from_str::<serde_json::Value>(&text) {
+            out.url = json.get("url").and_then(|v| v.as_str()).unwrap_or("").to_string();
+            out.title = json.get("title").and_then(|v| v.as_str()).unwrap_or("").to_string();
+            out.updated = json.get("updated").and_then(|v| v.as_u64()).unwrap_or(0);
+        }
+    }
+    if with_image {
+        if let Ok(bytes) = fs::read(&shot_path) {
+            use base64::Engine;
+            out.image_b64 = Some(base64::engine::general_purpose::STANDARD.encode(bytes));
+        }
+    }
+    out
+}

@@ -63,6 +63,11 @@ export const api = {
   mcpCheck: (cwd: string | null) => invoke<string>("mcp_check", { cwd }),
 
   // hubs
+  browserEnable: () => invoke<string>("browser_enable"),
+  browserDisable: () => invoke<void>("browser_disable"),
+  browserPreview: async (withImage = true) =>
+    camel(await invoke<any>("browser_preview", { withImage })),
+
   hubMcpSearch: async (query: string, limit = 30) =>
     camel(await invoke<any[]>("hub_mcp_search", { query, limit })),
   hubSkillsSearch: async (query: string, limit = 15) =>

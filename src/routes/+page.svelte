@@ -13,6 +13,7 @@
   import Dialog from "$lib/components/Dialog.svelte";
   import BashPanel from "$lib/components/BashPanel.svelte";
   import SessionTools from "$lib/components/SessionTools.svelte";
+  import BrowserPanel from "$lib/components/BrowserPanel.svelte";
 
   let scroller = $state<HTMLElement | null>(null);
   let stick = $state(true);
@@ -55,6 +56,9 @@
     } else if (mod && e.shiftKey && e.key.toLowerCase() === "l") {
       e.preventDefault();
       app.cycleThinking();
+    } else if (mod && e.shiftKey && e.key.toLowerCase() === "w") {
+      e.preventDefault();
+      app.toggleBrowser();
     } else if (e.key === "F5") {
       e.preventDefault();
       app.reloadSession();
@@ -156,6 +160,7 @@
 <Dialog />
 <BashPanel />
 <SessionTools />
+<BrowserPanel />
 
 <div class="toasts">
   {#each app.toasts as t (t.id)}

@@ -255,6 +255,15 @@ class AppState {
   showMemory = $state(false);
   showPalette = $state(false);
   showBash = $state(false);
+  showBrowser = $state(false);
+  browser = $state<{
+    enabled: boolean;
+    url: string;
+    title: string;
+    updated: number;
+    img: string | null;
+    script: string | null;
+  }>({ enabled: false, url: "", title: "", updated: 0, img: null, script: null });
   showFork = $state(false);
   showTree = $state(false);
   draftRestore = $state<string | null>(null);
@@ -271,6 +280,7 @@ class AppState {
 
   private listeners: UnlistenFn[] = [];
   private pollTimer: number | null = null;
+  private browserTimer: number | null = null;
   private waiting = new Map<string, { resolve: (v: any) => void; reject: (e: any) => void; timer: number }>();
   private booted = false;
   private notificationsAllowed: boolean | null = null;
@@ -387,6 +397,7 @@ class AppState {
     if (panel === "fork") this.showFork = true;
     if (panel === "tree") this.showTree = true;
     if (panel === "memory") this.showMemory = true;
+    if (panel === "browser") this.toggleBrowser(true);
     this.bin = await api.resolveBin();
     try {
       await api.stopAll();
@@ -480,6 +491,66 @@ class AppState {
     }
   }
 
+  // ── embedded browser preview ───────────────────────────────────────────
+  toggleBrowser(open = !this.showBrowser) {
+    this.showBrowser = open;
+    if (open) {
+      void this.pollBrowser();
+      if (this.browserTimer == null) {
+        this.browserTimer = window.setInterval(() => {
+          if (this.showBrowser) void this.pollBrowser(true);
+        }, 1200);
+      }
+    } else if (this.browserTimer != null) {
+      clearInterval(this.browserTimer);
+      this.browserTimer = null;
+    }
+  }
+
+  async pollBrowser(withImage = false) {
+    try {
+      const p = await api.browserPreview(withImage);
+      this.browser = {
+        enabled: !!p.enabled,
+        url: p.url ?? "",
+        title: p.title ?? "",
+        updated: p.updated ?? 0,
+        script: p.script ?? null,
+        img: withImage && p.imageB64 ? `data:image/jpeg;base64,${p.imageB64}` : this.browser.img,
+      };
+    } catch {
+      /* ignore */
+    }
+  }
+
+  async enableBrowser() {
+    try {
+      await api.browserEnable();
+      this.toast("navegador liberado para o agente — reinicie a aba para carregar as ferramentas", "ok");
+      await this.pollBrowser(true);
+      this.toggleBrowser(true);
+    } catch (e: any) {
+      this.toast(`não consegui habilitar: ${e?.message ?? e}`, "error");
+    }
+  }
+
+  async disableBrowser() {
+    try {
+      await api.browserDisable();
+      this.toast("navegador desabilitado (reinicie a aba para remover as ferramentas)", "info");
+      await this.pollBrowser(false);
+    } catch (e: any) {
+      this.toast(`falhou: ${e?.message ?? e}`, "error");
+    }
+  }
+
+  /** Sends the agent a ready-to-go browsing request. */
+  askAgentToBrowse(instruction: string) {
+    this.askAgent(
+      `Use as ferramentas mcp__${"hina-browser"}__* para ${instruction}\nAbra o navegador, navegue, tire screenshots e me mostre o resultado.`,
+    );
+  }
+
   // ── external change detection ─────────────────────────────────────────
   private startPolling() {
     if (this.pollTimer != null) return;
@@ -562,6 +633,7 @@ class AppState {
     if (panel === "fork") this.showFork = true;
     if (panel === "tree") this.showTree = true;
     if (panel === "memory") this.showMemory = true;
+    if (panel === "browser") this.toggleBrowser(true);
   }
 
   private applyTheme() {
@@ -591,6 +663,7 @@ class AppState {
     if (panel === "fork") this.showFork = true;
     if (panel === "tree") this.showTree = true;
     if (panel === "memory") this.showMemory = true;
+    if (panel === "browser") this.toggleBrowser(true);
   }
 
   setChatFont(size: number) {
@@ -602,6 +675,7 @@ class AppState {
     if (panel === "fork") this.showFork = true;
     if (panel === "tree") this.showTree = true;
     if (panel === "memory") this.showMemory = true;
+    if (panel === "browser") this.toggleBrowser(true);
   }
 
   // ── rpc plumbing ──────────────────────────────────────────────────────

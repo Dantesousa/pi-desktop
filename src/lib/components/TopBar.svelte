@@ -129,6 +129,14 @@
       </button>
     {/if}
 
+    <button
+      class="ghost"
+      class:active={app.showBrowser}
+      title="Navegador do agente (Ctrl+Shift+W)"
+      onclick={() => app.toggleBrowser()}
+    >
+      🌐
+    </button>
     <button class="ghost" title="Recarregar sessão do disco (F5)" onclick={() => app.reloadSession()}>↻</button>
     <button class="ghost" title="Exportar HTML" onclick={exportHtml}>⤓</button>
     <button

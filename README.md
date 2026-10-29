@@ -55,6 +55,20 @@ It does not reimplement the agent: it spawns `pi --mode rpc` as a sidecar and sp
 - **10 built-in themes** (Midnight, AMOLED, Hacker, Dracula, Nord, Gruvbox, Catppuccin, Tokyo Night, Cyberpunk, Light) plus a custom accent colour, automatic contrast ink on buttons, and a chat font-size control. Preview any theme with `?theme=<id>`, switch from the palette or the settings popover
 - **Pi self-update**: check the latest version and update the sidecar from the settings popover
 
+## Embedded browser (agent-visible)
+
+`scripts/browser-mcp.mjs` is a stdio MCP server that gives the agent a real browser
+(Playwright Firefox): `browser_navigate`, `browser_snapshot`, `browser_screenshot`,
+`browser_click`, `browser_type`, `browser_press`, `browser_scroll`, `browser_eval`,
+`browser_wait`, `browser_back`, `browser_close`.
+
+It mirrors every action to `~/.cache/pi-desktop/browser/` (`state.json` + `latest.jpg`),
+which the app polls to show a live preview panel (`Ctrl+Shift+W`, 🌐 in the header or
+the palette). The panel can enable/disable the server (writes the `hina-browser` entry
+in `~/.pi/agent/mcp.json`) and hand the agent a ready-made instruction.
+
+MCP servers are read when a pi process starts, so restart the tab after enabling.
+
 ## Exposed RPC surface
 
 Hina drives `pi --mode rpc` directly. Everything the protocol offers has a home in the UI:
