@@ -258,6 +258,7 @@ class AppState {
   showFork = $state(false);
   showTree = $state(false);
   draftRestore = $state<string | null>(null);
+  sendBehavior = $state<"steer" | "followUp">("steer");
   focusToken = $state(0);
   bin = $state("pi");
   appVersion = $state("0.1.1");
@@ -671,7 +672,7 @@ class AppState {
 
     const command: any = { type: "prompt", message: message || "(anexo)" };
     if (images.length) command.images = images;
-    if (tab.streaming || tab.working) command.streamingBehavior = "steer";
+    if (tab.streaming || tab.working) command.streamingBehavior = this.sendBehavior;
     tab.streaming = true;
     tab.working = true;
     tab.activity = "pensando…";
@@ -1245,6 +1246,30 @@ class AppState {
   }
 
   // ── clipboard ──────────────────────────────────────────────────────────
+  async sessionEntries(since?: string): Promise<any[]> {
+    try {
+      const data = await this.sendActive(since ? { type: "get_entries", since } : { type: "get_entries" });
+      return data?.entries ?? [];
+    } catch (e: any) {
+      this.toast(`entradas falhou: ${e?.message ?? e}`, "error");
+      return [];
+    }
+  }
+
+  async copyTranscriptJson() {
+    const entries = await this.sessionEntries();
+    if (!entries.length) {
+      this.toast("sessão vazia", "info");
+      return;
+    }
+    try {
+      await copyText(JSON.stringify(entries, null, 2));
+      this.toast(`histórico completo copiado (${entries.length} entradas)`, "ok");
+    } catch (e: any) {
+      this.toast(`copiar falhou: ${e?.message ?? e}`, "error");
+    }
+  }
+
   async copyLastResponse() {
     try {
       const data = await this.sendActive({ type: "get_last_assistant_text" });

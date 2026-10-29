@@ -136,6 +136,16 @@
     ></textarea>
     <div class="actions">
       <button class="ghost" title="Anexar arquivos" onclick={pickFiles}>📎</button>
+      {#if app.working}
+        <select
+          class="behavior"
+          bind:value={app.sendBehavior}
+          title="como entregar a mensagem durante a execução"
+        >
+          <option value="steer">desviar</option>
+          <option value="followUp">depois</option>
+        </select>
+      {/if}
       <span class="hint">
         {#if app.working}
           <span class="work"><span class="pulse"></span>{app.activity ?? "trabalhando…"}</span>
@@ -214,6 +224,12 @@
   @keyframes pulse {
     0%, 100% { opacity: 0.25; transform: scale(0.8); }
     50% { opacity: 1; transform: scale(1.15); }
+  }
+  .behavior {
+    font-size: 10.5px;
+    padding: 2px 5px;
+    background: var(--panel-2);
+    max-width: 92px;
   }
   .stop {
     background: #4a2222;
