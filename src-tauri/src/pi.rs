@@ -95,10 +95,6 @@ pub fn resolve_bin() -> String {
     "pi".to_string()
 }
 
-fn emit(app: &AppHandle, event: &str, payload: serde_json::Value) {
-    let _ = app.emit(event, payload);
-}
-
 fn emit_tab(app: &AppHandle, tab: &str, event: &str, payload: serde_json::Value) {
     let _ = app.emit(event, serde_json::json!({ "tab": tab, "payload": payload }));
 }
