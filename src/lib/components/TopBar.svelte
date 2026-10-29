@@ -3,7 +3,7 @@
   import { app, THEMES } from "../store.svelte";
   import { api } from "../api";
 
-  const THINKING = ["off", "minimal", "low", "medium", "high", "xhigh", "max"];
+  let showQueue = $state(false);
   let showSettings = $state(
     typeof location !== "undefined" && new URLSearchParams(location.search).get("settings") === "1",
   );
@@ -101,7 +101,7 @@
     </select>
 
     <select value={app.thinking} onchange={onThinking} title="thinking level">
-      {#each THINKING as t}
+      {#each app.active?.thinkingLevels ?? ["off"] as t}
         <option value={t}>{t}</option>
       {/each}
     </select>
@@ -117,7 +117,16 @@
       <span class="cost" class:warn={app.costWarn}>${app.cost.toFixed(3)}</span>
     {/if}
     {#if app.pending > 0}
-      <span class="queue">{app.pending} na fila</span>
+      <button class="queue" onclick={() => (showQueue = !showQueue)} title="fila de mensagens">
+        {app.pending} na fila
+      </button>
+    {/if}
+    {#if app.active?.retrying}
+      <button class="queue retry" onclick={() => app.abortRetry()} title="cancelar retry">
+        retry…
+
+        <span class="x">×</span>
+      </button>
     {/if}
 
     <button class="ghost" title="Recarregar sessão do disco (F5)" onclick={() => app.reloadSession()}>↻</button>
@@ -134,6 +143,26 @@
       ⚙
     </button>
   </div>
+
+  {#if showQueue && app.pending > 0}
+    <div class="queuebox">
+      {#if app.active?.queue.steering.length}
+        <div class="qlabel">desvio (steer)</div>
+        {#each app.active.queue.steering as q}
+          <div class="qitem">{q}</div>
+        {/each}
+      {/if}
+      {#if app.active?.queue.followUp.length}
+        <div class="qlabel">depois (follow-up)</div>
+        {#each app.active.queue.followUp as q}
+          <div class="qitem">{q}</div>
+        {/each}
+      {/if}
+      <div class="qfoot">
+        <button class="mini" onclick={() => { showQueue = false; app.clearQueue(); }}>limpar fila</button>
+      </div>
+    </div>
+  {/if}
 
   {#if showSettings}
     <div class="settings">
@@ -206,6 +235,51 @@
         <span>bin</span>
         <input value={app.bin} readonly />
       </label>
+      <div class="toggles">
+        <label class="cb">
+          <input
+            type="checkbox"
+            checked={app.active?.autoCompaction ?? true}
+            onchange={(e) => app.setAutoCompaction((e.target as HTMLInputElement).checked)}
+          />
+          compactação automática
+        </label>
+        <label class="cb">
+          <input
+            type="checkbox"
+            checked={app.active?.autoRetry ?? true}
+            onchange={(e) => app.setAutoRetry((e.target as HTMLInputElement).checked)}
+          />
+          retry automático
+        </label>
+      </div>
+      <label>
+        <span>durante a execução (steer)</span>
+        <select
+          value={app.active?.steeringMode ?? "all"}
+          onchange={(e) => app.setSteeringMode((e.target as HTMLSelectElement).value)}
+        >
+          <option value="all">entregar todas</option>
+          <option value="one-at-a-time">uma por vez</option>
+        </select>
+      </label>
+      <label>
+        <span>depois de terminar (follow-up)</span>
+        <select
+          value={app.active?.followUpMode ?? "one-at-a-time"}
+          onchange={(e) => app.setFollowUpMode((e.target as HTMLSelectElement).value)}
+        >
+          <option value="all">entregar todas</option>
+          <option value="one-at-a-time">uma por vez</option>
+        </select>
+      </label>
+      <div class="toolrow">
+        <button class="mini" onclick={() => (app.showBash = true)}>bash (Ctrl+B)</button>
+        <button class="mini" onclick={() => (app.showFork = true)}>retomar de…</button>
+        <button class="mini" onclick={() => (app.showTree = true)}>árvore</button>
+        <button class="mini" onclick={() => app.cloneSession()}>clonar</button>
+      </div>
+
       <div class="piver">
         <span class="faint">pi {piVersion?.current ?? "—"}{piVersion?.latest ? ` · latest ${piVersion.latest}` : ""}</span>
         <button class="mini" onclick={checkPi} disabled={updating}>verificar</button>
@@ -336,6 +410,64 @@
   .queue {
     font-size: 10.5px;
     color: var(--yellow);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 1px 8px;
+  }
+  .queue.retry {
+    color: var(--red);
+  }
+  .queuebox {
+    position: absolute;
+    top: 46px;
+    right: 220px;
+    width: 320px;
+    max-height: 40vh;
+    overflow: auto;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 11px;
+    padding: 10px;
+    z-index: 45;
+    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.5);
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+  .qlabel {
+    font-size: 9.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--text-faint);
+  }
+  .qitem {
+    font-size: 11.5px;
+    background: var(--bg-2);
+    border: 1px solid var(--border-soft);
+    border-radius: 7px;
+    padding: 5px 7px;
+    color: var(--text-dim);
+  }
+  .qfoot {
+    display: flex;
+    justify-content: flex-end;
+  }
+  .toggles {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .cb {
+    flex-direction: row !important;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+  .toolrow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
   }
   button.active {
     border-color: #35507f;

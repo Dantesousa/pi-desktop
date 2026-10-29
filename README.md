@@ -53,6 +53,25 @@ It does not reimplement the agent: it spawns `pi --mode rpc` as a sidecar and sp
 - **10 built-in themes** (Midnight, AMOLED, Hacker, Dracula, Nord, Gruvbox, Catppuccin, Tokyo Night, Cyberpunk, Light) plus a custom accent colour, automatic contrast ink on buttons, and a chat font-size control. Preview any theme with `?theme=<id>`, switch from the palette or the settings popover
 - **Pi self-update**: check the latest version and update the sidecar from the settings popover
 
+## Exposed RPC surface
+
+Hina drives `pi --mode rpc` directly. Everything the protocol offers has a home in the UI:
+
+| command | where |
+|---|---|
+| `prompt`, `steer`, `follow_up` | composer (Enter sends; while running it steers) |
+| `abort`, `clear_queue` | stop button, queue chip (restores cleared text to the composer) |
+| `new_session`, `switch_session`, `set_session_name` | sidebar / tabs |
+| `fork`, `clone`, `get_fork_messages`, `get_tree`, `get_entries` | "retomar de uma mensagem", "clonar", "árvore da sessão" |
+| `get_messages`, `get_last_assistant_text` | chat history, "copiar última resposta" |
+| `get_state`, `get_session_stats`, `get_commands` | header, palette, slash completion |
+| `get_available_models`, `set_model`, `cycle_model` | model picker, `Ctrl+Shift+M` |
+| `get_available_thinking_levels`, `set_thinking_level`, `cycle_thinking_level` | thinking picker, `Ctrl+Shift+L` |
+| `set_steering_mode`, `set_follow_up_mode` | settings |
+| `compact`, `set_auto_compaction`, `set_auto_retry`, `abort_retry` | palette, settings, retry chip |
+| `bash`, `abort_bash` | bash panel (`Ctrl+B`) with streamed output |
+| `export_html` | header ⤓ |
+
 ## Requirements
 
 - Rust 1.80+ and Cargo

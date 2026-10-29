@@ -269,6 +269,61 @@ describe("themes", () => {
   });
 });
 
+describe("extended RPC surface", () => {
+  function respond(tab: Tab, data: any) {
+    const call = invokeMock.mock.calls.at(-1)!;
+    const command = (call[1] as any).command;
+    record(tab, { type: "response", id: command.id, command: command.type, success: true, data });
+  }
+
+  it("cycles to the next model and thinking level", async () => {
+    const tab = freshTab();
+    const p = app.cycleModel();
+    respond(tab, { model: { id: "m2", provider: "p", name: "M2" }, thinkingLevel: "high" });
+    await p;
+    expect(app.active.model?.id).toBe("m2");
+    expect(app.active.thinking).toBe("high");
+  });
+
+  it("applies steering / follow-up modes and auto toggles", async () => {
+    freshTab();
+    const a = app.setSteeringMode("one-at-a-time");
+    respond(app.active, {});
+    await a;
+    expect(app.active.steeringMode).toBe("one-at-a-time");
+
+    const b = app.setAutoCompaction(false);
+    respond(app.active, {});
+    await b;
+    expect(app.active.autoCompaction).toBe(false);
+  });
+
+  it("clear_queue returns the texts to the composer draft", async () => {
+    const tab = freshTab();
+    const p = app.clearQueue();
+    respond(tab, { steering: ["mude de plano"], followUp: ["depois resuma"] });
+    await p;
+    expect(app.draftRestore).toContain("mude de plano");
+    expect(app.active.pending).toBe(0);
+    app.draftRestore = null;
+  });
+
+  it("streams bash output into the tab", () => {
+    const tab = freshTab();
+    record(tab, { type: "bash_execution_update", id: "b1", delta: "line1\n" });
+    record(tab, { type: "bash_execution_update", id: "b1", delta: "line2\n" });
+    expect(tab.bashLog).toBe("line1\nline2\n");
+  });
+
+  it("tracks retry state", () => {
+    const tab = freshTab();
+    record(tab, { type: "auto_retry_start", attempt: 1, maxAttempts: 3, delayMs: 10 });
+    expect(tab.retrying).toBe(true);
+    record(tab, { type: "auto_retry_end", success: true, attempt: 1 });
+    expect(tab.retrying).toBe(false);
+  });
+});
+
 describe("run lifecycle", () => {
   it("flips working off when the agent settles", () => {
     const tab = freshTab();

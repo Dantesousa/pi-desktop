@@ -153,6 +153,15 @@ export class Tab {
   holders = $state<{ pid: number; cmd: string }[]>([]);
   lastLen = $state<number | null>(null);
   pending = $state(0);
+  queue = $state<{ steering: string[]; followUp: string[] }>({ steering: [], followUp: [] });
+  steeringMode = $state("all");
+  followUpMode = $state("one-at-a-time");
+  autoCompaction = $state(true);
+  autoRetry = $state(true);
+  retrying = $state(false);
+  thinkingLevels = $state<string[]>(["off", "minimal", "low", "medium", "high", "xhigh", "max"]);
+  bashLog = $state("");
+  bashRunning = $state(false);
   currentKey = $state<string | null>(null);
   taskStartedAt = $state<number | null>(null);
   thinking = $state("medium");
@@ -245,6 +254,10 @@ class AppState {
   pinned = $state<string[]>(JSON.parse(localStorage.getItem("pi.pinned") || "[]"));
   showMemory = $state(false);
   showPalette = $state(false);
+  showBash = $state(false);
+  showFork = $state(false);
+  showTree = $state(false);
+  draftRestore = $state<string | null>(null);
   focusToken = $state(0);
   bin = $state("pi");
   appVersion = $state("0.1.1");
@@ -368,6 +381,10 @@ class AppState {
       localStorage.setItem("pi.theme", urlTheme);
     }
     this.applyTheme();
+    const panel = new URLSearchParams(location.search).get("panel");
+    if (panel === "bash") this.showBash = true;
+    if (panel === "fork") this.showFork = true;
+    if (panel === "tree") this.showTree = true;
     this.bin = await api.resolveBin();
     try {
       await api.stopAll();
@@ -445,6 +462,7 @@ class AppState {
       await this.refreshState(tab);
       await this.refreshStats(tab);
       tab.commands = (await this.send(tab.id, { type: "get_commands" }))?.commands ?? [];
+      void this.loadThinkingLevels(tab);
     } catch (e: any) {
       tab.conn = "dead";
       this.error = String(e?.message ?? e);
@@ -536,6 +554,10 @@ class AppState {
     this.theme = theme;
     localStorage.setItem("pi.theme", theme);
     this.applyTheme();
+    const panel = new URLSearchParams(location.search).get("panel");
+    if (panel === "bash") this.showBash = true;
+    if (panel === "fork") this.showFork = true;
+    if (panel === "tree") this.showTree = true;
   }
 
   private applyTheme() {
@@ -560,12 +582,20 @@ class AppState {
     this.accent = hex;
     localStorage.setItem("pi.accent", hex);
     this.applyTheme();
+    const panel = new URLSearchParams(location.search).get("panel");
+    if (panel === "bash") this.showBash = true;
+    if (panel === "fork") this.showFork = true;
+    if (panel === "tree") this.showTree = true;
   }
 
   setChatFont(size: number) {
     this.chatFont = size;
     localStorage.setItem("pi.chatFont", String(size));
     this.applyTheme();
+    const panel = new URLSearchParams(location.search).get("panel");
+    if (panel === "bash") this.showBash = true;
+    if (panel === "fork") this.showFork = true;
+    if (panel === "tree") this.showTree = true;
   }
 
   // ── rpc plumbing ──────────────────────────────────────────────────────
@@ -832,6 +862,9 @@ class AppState {
       const st = await this.send(tab.id, { type: "get_state" });
       if (st?.model) tab.model = st.model;
       if (st?.thinkingLevel) tab.thinking = st.thinkingLevel;
+      if (st?.steeringMode) tab.steeringMode = st.steeringMode;
+      if (st?.followUpMode) tab.followUpMode = st.followUpMode;
+      if (typeof st?.autoCompactionEnabled === "boolean") tab.autoCompaction = st.autoCompactionEnabled;
       tab.sessionId = st?.sessionId ?? null;
       tab.sessionName = st?.sessionName ?? null;
       if (st?.sessionFile) tab.sessionFile = st.sessionFile;
@@ -1027,6 +1060,203 @@ class AppState {
     } catch (e: any) {
       this.toast(`falha ao salvar diagnóstico: ${e?.message ?? e}`, "error");
       return null;
+    }
+  }
+
+  // ── queue / retry / modes ──────────────────────────────────────────────
+  async clearQueue() {
+    const tab = this.active;
+    try {
+      const data = await this.send(tab.id, { type: "clear_queue" });
+      const texts = [...(data?.steering ?? []), ...(data?.followUp ?? [])];
+      tab.queue = { steering: [], followUp: [] };
+      tab.pending = 0;
+      if (texts.length) {
+        this.draftRestore = texts.join("\n\n");
+        this.toast(`fila limpa (${texts.length}) — texto devolvido ao campo`, "ok");
+      } else {
+        this.toast("fila vazia", "info");
+      }
+    } catch (e: any) {
+      this.toast(`limpar fila falhou: ${e?.message ?? e}`, "error");
+    }
+  }
+
+  async abortRetry() {
+    try {
+      await this.sendActive({ type: "abort_retry" });
+      this.active.retrying = false;
+      this.toast("retry cancelado", "ok");
+    } catch (e: any) {
+      this.toast(`cancelar retry falhou: ${e?.message ?? e}`, "error");
+    }
+  }
+
+  async setSteeringMode(mode: string) {
+    const tab = this.active;
+    await this.send(tab.id, { type: "set_steering_mode", mode });
+    tab.steeringMode = mode;
+  }
+
+  async setFollowUpMode(mode: string) {
+    const tab = this.active;
+    await this.send(tab.id, { type: "set_follow_up_mode", mode });
+    tab.followUpMode = mode;
+  }
+
+  async setAutoCompaction(enabled: boolean) {
+    const tab = this.active;
+    await this.send(tab.id, { type: "set_auto_compaction", enabled });
+    tab.autoCompaction = enabled;
+  }
+
+  async setAutoRetry(enabled: boolean) {
+    const tab = this.active;
+    await this.send(tab.id, { type: "set_auto_retry", enabled });
+    tab.autoRetry = enabled;
+  }
+
+  // ── model / thinking cycling ───────────────────────────────────────────
+  async cycleModel() {
+    const tab = this.active;
+    try {
+      const data = await this.send(tab.id, { type: "cycle_model" });
+      if (!data?.model) {
+        this.toast("só há um modelo disponível", "info");
+        return;
+      }
+      tab.model = data.model;
+      if (data.thinkingLevel) tab.thinking = data.thinkingLevel;
+      void this.loadThinkingLevels(tab);
+      this.toast(`modelo: ${data.model.name ?? data.model.id}`, "ok");
+    } catch (e: any) {
+      this.toast(`trocar modelo falhou: ${e?.message ?? e}`, "error");
+    }
+  }
+
+  async cycleThinking() {
+    const tab = this.active;
+    try {
+      const data = await this.send(tab.id, { type: "cycle_thinking_level" });
+      if (!data?.level) {
+        this.toast("este modelo não suporta raciocínio", "info");
+        return;
+      }
+      tab.thinking = data.level;
+      this.toast(`thinking: ${data.level}`, "ok");
+    } catch (e: any) {
+      this.toast(`trocar thinking falhou: ${e?.message ?? e}`, "error");
+    }
+  }
+
+  async loadThinkingLevels(tab = this.active) {
+    try {
+      const data = await this.send(tab.id, { type: "get_available_thinking_levels" });
+      if (Array.isArray(data?.levels) && data.levels.length) tab.thinkingLevels = data.levels;
+    } catch {
+      /* ignore */
+    }
+  }
+
+  // ── bash runner ────────────────────────────────────────────────────────
+  async runBash(command: string, excludeFromContext = false) {
+    const tab = this.active;
+    tab.bashLog = "";
+    tab.bashRunning = true;
+    try {
+      const data = await this.send(
+        tab.id,
+        { type: "bash", command, excludeFromContext },
+        15 * 60 * 1000,
+      );
+      return data;
+    } finally {
+      tab.bashRunning = false;
+    }
+  }
+
+  async abortBash() {
+    try {
+      await this.sendActive({ type: "abort_bash" });
+    } catch {
+      /* ignore */
+    }
+  }
+
+  // ── fork / clone / tree ────────────────────────────────────────────────
+  async forkMessages(): Promise<{ entryId: string; text: string }[]> {
+    try {
+      const data = await this.sendActive({ type: "get_fork_messages" });
+      return data?.messages ?? [];
+    } catch (e: any) {
+      this.toast(`listar pontos de fork falhou: ${e?.message ?? e}`, "error");
+      return [];
+    }
+  }
+
+  async forkFrom(entryId: string) {
+    const tab = this.active;
+    try {
+      const data = await this.send(tab.id, { type: "fork", entryId });
+      if (data?.cancelled) {
+        this.toast("fork cancelado por uma extensão", "warn");
+        return;
+      }
+      await this.reloadAfterSessionChange(tab);
+      this.toast("fork criado", "ok");
+    } catch (e: any) {
+      this.toast(`fork falhou: ${e?.message ?? e}`, "error");
+    }
+  }
+
+  async cloneSession() {
+    const tab = this.active;
+    try {
+      const data = await this.send(tab.id, { type: "clone" });
+      if (data?.cancelled) {
+        this.toast("clone cancelado", "warn");
+        return;
+      }
+      await this.reloadAfterSessionChange(tab);
+      this.toast("sessão clonada", "ok");
+    } catch (e: any) {
+      this.toast(`clone falhou: ${e?.message ?? e}`, "error");
+    }
+  }
+
+  async sessionTree(): Promise<{ tree: any[]; leafId: string | null } | null> {
+    try {
+      const data = await this.sendActive({ type: "get_tree" });
+      return { tree: data?.tree ?? [], leafId: data?.leafId ?? null };
+    } catch (e: any) {
+      this.toast(`árvore falhou: ${e?.message ?? e}`, "error");
+      return null;
+    }
+  }
+
+  private async reloadAfterSessionChange(tab: Tab) {
+    tab.messages = [];
+    tab.currentKey = null;
+    await this.refreshState(tab);
+    const history = await this.send(tab.id, { type: "get_messages" });
+    this.hydrate(tab, history?.messages ?? []);
+    await this.refreshStats(tab);
+    await this.loadSessions();
+  }
+
+  // ── clipboard ──────────────────────────────────────────────────────────
+  async copyLastResponse() {
+    try {
+      const data = await this.sendActive({ type: "get_last_assistant_text" });
+      const text = data?.text;
+      if (!text) {
+        this.toast("nenhuma resposta de texto ainda", "info");
+        return;
+      }
+      await copyText(text);
+      this.toast("última resposta copiada", "ok");
+    } catch (e: any) {
+      this.toast(`copiar falhou: ${e?.message ?? e}`, "error");
     }
   }
 
@@ -1322,7 +1552,12 @@ class AppState {
         break;
 
       case "queue_update":
-        tab.pending = (rec.steering?.length ?? 0) + (rec.followUp?.length ?? 0);
+        tab.queue = { steering: rec.steering ?? [], followUp: rec.followUp ?? [] };
+        tab.pending = tab.queue.steering.length + tab.queue.followUp.length;
+        break;
+
+      case "bash_execution_update":
+        tab.bashLog += rec.delta ?? "";
         break;
 
       case "compaction_start":
@@ -1336,7 +1571,12 @@ class AppState {
         );
         break;
 
+      case "auto_retry_end":
+        tab.retrying = false;
+        break;
+
       case "auto_retry_start":
+        tab.retrying = true;
         tab.messages.push(
           newMsg({
             key: uid(),
@@ -1389,6 +1629,24 @@ export function langFor(name: string): string {
     c: "c",
   };
   return map[ext] ?? "";
+}
+
+export async function copyText(text: string): Promise<void> {
+  try {
+    await navigator.clipboard.writeText(text);
+    return;
+  } catch {
+    /* fall through to the textarea trick (WebKitGTK) */
+  }
+  const ta = document.createElement("textarea");
+  ta.value = text;
+  ta.style.position = "fixed";
+  ta.style.opacity = "0";
+  document.body.appendChild(ta);
+  ta.select();
+  const ok = document.execCommand("copy");
+  document.body.removeChild(ta);
+  if (!ok) throw new Error("clipboard indisponível");
 }
 
 export function basename(path: string): string {

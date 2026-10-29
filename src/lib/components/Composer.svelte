@@ -36,6 +36,14 @@
     if (focusToken > 0) input?.focus();
   });
 
+  $effect(() => {
+    if (app.draftRestore) {
+      text = app.draftRestore;
+      app.draftRestore = null;
+      setTimeout(() => input?.focus(), 20);
+    }
+  });
+
   async function pickFiles() {
     const picked = await open({ multiple: true, directory: false });
     if (!picked) return;

@@ -11,6 +11,8 @@
   import CommandPalette from "$lib/components/CommandPalette.svelte";
   import PromptDialog from "$lib/components/PromptDialog.svelte";
   import Dialog from "$lib/components/Dialog.svelte";
+  import BashPanel from "$lib/components/BashPanel.svelte";
+  import SessionTools from "$lib/components/SessionTools.svelte";
 
   let scroller = $state<HTMLElement | null>(null);
   let stick = $state(true);
@@ -38,6 +40,21 @@
       // hard reload of the webview: discards stale HMR stylesheets
       e.preventDefault();
       window.location.reload();
+    } else if (mod && e.key.toLowerCase() === "b") {
+      e.preventDefault();
+      app.showBash = !app.showBash;
+    } else if (mod && e.shiftKey && e.key.toLowerCase() === "f") {
+      e.preventDefault();
+      app.showFork = !app.showFork;
+    } else if (mod && e.shiftKey && e.key.toLowerCase() === "g") {
+      e.preventDefault();
+      app.showTree = !app.showTree;
+    } else if (mod && e.shiftKey && e.key.toLowerCase() === "m") {
+      e.preventDefault();
+      app.cycleModel();
+    } else if (mod && e.shiftKey && e.key.toLowerCase() === "l") {
+      e.preventDefault();
+      app.cycleThinking();
     } else if (e.key === "F5") {
       e.preventDefault();
       app.reloadSession();
@@ -137,6 +154,8 @@
 <CommandPalette />
 <PromptDialog />
 <Dialog />
+<BashPanel />
+<SessionTools />
 
 <div class="toasts">
   {#each app.toasts as t (t.id)}
