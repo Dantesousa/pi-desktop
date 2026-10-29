@@ -386,6 +386,7 @@ class AppState {
     if (panel === "bash") this.showBash = true;
     if (panel === "fork") this.showFork = true;
     if (panel === "tree") this.showTree = true;
+    if (panel === "memory") this.showMemory = true;
     this.bin = await api.resolveBin();
     try {
       await api.stopAll();
@@ -559,6 +560,7 @@ class AppState {
     if (panel === "bash") this.showBash = true;
     if (panel === "fork") this.showFork = true;
     if (panel === "tree") this.showTree = true;
+    if (panel === "memory") this.showMemory = true;
   }
 
   private applyTheme() {
@@ -587,6 +589,7 @@ class AppState {
     if (panel === "bash") this.showBash = true;
     if (panel === "fork") this.showFork = true;
     if (panel === "tree") this.showTree = true;
+    if (panel === "memory") this.showMemory = true;
   }
 
   setChatFont(size: number) {
@@ -597,6 +600,7 @@ class AppState {
     if (panel === "bash") this.showBash = true;
     if (panel === "fork") this.showFork = true;
     if (panel === "tree") this.showTree = true;
+    if (panel === "memory") this.showMemory = true;
   }
 
   // ── rpc plumbing ──────────────────────────────────────────────────────

@@ -41,6 +41,8 @@ It does not reimplement the agent: it spawns `pi --mode rpc` as a sidecar and sp
 - Add / edit / delete entries, then reconcile the SQLite index (`/memory-sync-markdown`)
 - "Consolidate" hands the pruning task to the agent
 - Browse and edit **skills** (`SKILL.md`) and create new ones
+- **Skills hub**: searches GitHub code for `SKILL.md`, lists the skill directories of a repository (code search + contents API, so huge repos stay fast) and installs one with its sibling files into `~/.pi/agent/pi-hermes-memory/skills/<slug>`; a curated list of known collections shows up when the query is empty
+- **MCP hub**: searches the official registry (`registry.modelcontextprotocol.io`), maps `http` remotes and `npm`/`pypi`/`oci` packages to a config entry, and adds the server to `mcp.json` with one click
 
 **Control & safety**
 - **Permission gate**: a bundled extension intercepts `tool_call` and asks before dangerous bash, or every write, depending on mode (`off` / `dangerous` / `all`)

@@ -6,7 +6,14 @@
 
   type Tab = "memory" | "user" | "failure" | "sessions" | "skills" | "mcp";
 
-  let tab = $state<Tab>("memory");
+  const qs = typeof location !== "undefined" ? new URLSearchParams(location.search) : null;
+  const initialTab = qs?.get("tab") as Tab | null;
+  let tab = $state<Tab>(
+    initialTab && ["memory", "user", "failure", "sessions", "skills", "mcp"].includes(initialTab)
+      ? initialTab
+      : "memory",
+  );
+  const initialView = qs?.get("view");
   let file = $state<MemoryFile | null>(null);
   let loading = $state(false);
   let err = $state<string | null>(null);
@@ -24,6 +31,15 @@
   let mcpRaw = $state<any>(null);
   let mcpOutput = $state<string | null>(null);
   let mcpBusy = $state(false);
+  let mcpView = $state<"list" | "hub">(initialView === "hub" ? "hub" : "list");
+  let hubQuery = $state("");
+  let hubResults = $state<any[]>([]);
+  let hubBusy = $state(false);
+  let hubError = $state<string | null>(null);
+  let skillView = $state<"list" | "hub">(initialView === "hub" ? "hub" : "list");
+  let repoResults = $state<any[]>([]);
+  let repoSkills = $state<any[]>([]);
+  let activeRepo = $state<string | null>(null);
   let newName = $state("");
   let newCommand = $state("");
   let newUrl = $state("");
@@ -39,18 +55,18 @@
 
   async function load() {
     if (tab === "sessions") return;
-    if (tab === "skills") {
-      skills = await api.skillsList();
-      return;
-    }
-    if (tab === "mcp") {
-      mcpRaw = await api.mcpConfig();
-      mcpServers = await api.mcpServers();
-      return;
-    }
     loading = true;
     err = null;
     try {
+      if (tab === "skills") {
+        skills = await api.skillsList();
+        return;
+      }
+      if (tab === "mcp") {
+        mcpRaw = await api.mcpConfig();
+        mcpServers = await api.mcpServers();
+        return;
+      }
       file = await api.memoryRead(tab);
       editing = null;
       adding = false;
@@ -63,7 +79,14 @@
 
   $effect(() => {
     tab;
-    load();
+    void load().catch(() => {});
+  });
+
+  $effect(() => {
+    // curated list as soon as the skills hub opens
+    if (tab === "skills" && skillView === "hub" && !repoResults.length && !activeRepo) {
+      void searchSkillsHub();
+    }
   });
 
   async function saveAll(raws: string[]) {
@@ -241,16 +264,95 @@
     }
   }
 
+  function safeName(raw: string): string {
+    return raw
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .split("-")
+      .filter(Boolean)
+      .slice(-2)
+      .join("-");
+  }
+
+  async function searchMcpHub() {
+    hubBusy = true;
+    hubError = null;
+    try {
+      hubResults = await api.hubMcpSearch(hubQuery, 30);
+      if (!hubResults.length) hubError = "nada encontrado no registro oficial";
+    } catch (e: any) {
+      hubError = String(e?.message ?? e);
+    } finally {
+      hubBusy = false;
+    }
+  }
+
+  async function addCandidate(c: any) {
+    const name = safeName(c.name) || safeName(c.title) || "server";
+    await saveMcp((cfg) => {
+      cfg.mcpServers[name] = c.url
+        ? { url: c.url, description: c.description }
+        : { command: c.command, args: c.args ?? [], description: c.description };
+    });
+    app.toast(`"${name}" adicionado`, "ok");
+  }
+
+  async function searchSkillsHub() {
+    hubBusy = true;
+    hubError = null;
+    repoSkills = [];
+    activeRepo = null;
+    try {
+      repoResults = await api.hubSkillsSearch(hubQuery, 15);
+      if (!repoResults.length) hubError = "nenhum repositório encontrado";
+    } catch (e: any) {
+      hubError = String(e?.message ?? e);
+    } finally {
+      hubBusy = false;
+    }
+  }
+
+  async function openRepo(repo: string) {
+    hubBusy = true;
+    hubError = null;
+    activeRepo = repo;
+    try {
+      repoSkills = await api.hubSkillsInRepo(repo);
+      if (!repoSkills.length) hubError = "nenhuma SKILL.md nesse repositório";
+    } catch (e: any) {
+      hubError = String(e?.message ?? e);
+    } finally {
+      hubBusy = false;
+    }
+  }
+
+  async function installSkill(s: any) {
+    if (!activeRepo) return;
+    hubBusy = true;
+    try {
+      const dest = await api.hubSkillInstall(activeRepo, s.dir);
+      await app.loadSkills();
+      skills = app.skills;
+      app.toast(`skill instalada em ${dest}`, "ok");
+    } catch (e: any) {
+      hubError = String(e?.message ?? e);
+    } finally {
+      hubBusy = false;
+    }
+  }
+
   const pct = $derived(file ? Math.min(100, (file.chars / file.limit) * 100) : 0);
 </script>
 
 <section>
-  <div class="tabs">
-    {#each tabs as t}
-      <button class="tab" class:active={tab === t.id} onclick={() => (tab = t.id)}>{t.label}</button>
-    {/each}
-    <span class="spacer"></span>
-    <button class="ghost mini" title="fechar" onclick={() => (app.showMemory = false)}>×</button>
+  <div class="tabbar">
+    <div class="tabs">
+      {#each tabs as t}
+        <button class="tab" class:active={tab === t.id} onclick={() => (tab = t.id)}>{t.label}</button>
+      {/each}
+    </div>
+    <button class="ghost mini close" title="fechar" onclick={() => (app.showMemory = false)}>×</button>
   </div>
 
   {#if err}
@@ -343,12 +445,46 @@
 
   {#if tab === "mcp"}
     <div class="toolbar">
+      <button class="mini" class:sel={mcpView === "list"} onclick={() => (mcpView = "list")}>
+        configurados
+      </button>
+      <button class="mini" class:sel={mcpView === "hub"} onclick={() => (mcpView = "hub")}>
+        hub
+      </button>
+      <span class="spacer"></span>
       <button class="mini" onclick={load}>↻</button>
       <button class="mini" onclick={checkMcp} disabled={mcpBusy}>
         {mcpBusy ? "testando…" : "testar conexão"}
       </button>
       <span class="faint small">{mcpServers.length} servidor(es)</span>
     </div>
+    {#if mcpView === "hub"}
+      <div class="searchbox">
+        <input
+          bind:value={hubQuery}
+          placeholder="buscar no registro oficial (MCP)…"
+          onkeydown={(e) => e.key === "Enter" && searchMcpHub()}
+        />
+        <button class="mini" onclick={searchMcpHub} disabled={hubBusy}>buscar</button>
+      </div>
+      {#if hubError}<div class="err">{hubError}</div>{/if}
+      <div class="entries">
+        {#each hubResults as c}
+          <div class="entry">
+            <div class="ehead">
+              <span class="cat">{c.kind}</span>
+              <span class="faint small">{c.title || c.name}</span>
+              <span class="spacer"></span>
+              <button class="mini primary" onclick={() => addCandidate(c)}>+ add</button>
+            </div>
+            <div class="faint small">{c.description}</div>
+            <div class="faint small mono">{c.target}</div>
+          </div>
+        {:else}
+          <div class="empty">{hubBusy ? "buscando…" : "busque um servidor no registro"}</div>
+        {/each}
+      </div>
+    {:else}
     <div class="entries">
       {#each mcpServers as srv}
         <div class="entry">
@@ -382,6 +518,7 @@
         <pre class="mcpsetup">{mcpOutput}</pre>
       {/if}
     </div>
+    {/if}
   {/if}
 
   {#if tab === "skills"}
@@ -398,9 +535,66 @@
         oninput={() => (skillDirty = true)}
         spellcheck="false"
       ></textarea>
+    {:else if skillView === "hub"}
+      <div class="toolbar">
+        <button class="mini" onclick={() => { skillView = "list"; repoSkills = []; activeRepo = null; }}>
+          ← instaladas
+        </button>
+        <span class="spacer"></span>
+        {#if activeRepo}
+          <button class="mini" onclick={() => { activeRepo = null; repoSkills = []; }}>← repos</button>
+        {/if}
+      </div>
+      {#if !activeRepo}
+        <div class="searchbox">
+          <input
+            bind:value={hubQuery}
+            placeholder="buscar skills no GitHub…"
+            onkeydown={(e) => e.key === "Enter" && searchSkillsHub()}
+          />
+          <button class="mini" onclick={searchSkillsHub} disabled={hubBusy}>buscar</button>
+        </div>
+        {#if hubError}<div class="err">{hubError}</div>{/if}
+        <div class="entries">
+          {#each repoResults as r}
+            <button class="entry" onclick={() => openRepo(r.fullName)}>
+              <div class="ehead">
+                <span class="cat">{r.hits ? `${r.hits} SKILL.md` : "curada"}</span>
+                <span class="spacer"></span>
+              </div>
+              <div class="body"><strong>{r.fullName}</strong></div>
+              <div class="faint small">{r.description}</div>
+            </button>
+          {:else}
+            <div class="empty">{hubBusy ? "buscando…" : "busque um repositório com skills"}</div>
+          {/each}
+        </div>
+      {:else}
+        <div class="toolbar"><span class="faint small mono">{activeRepo}</span></div>
+        {#if hubError}<div class="err">{hubError}</div>{/if}
+        <div class="entries">
+          {#each repoSkills as s}
+            <div class="entry">
+              <div class="ehead">
+                <span class="spacer"></span>
+                <button class="mini primary" onclick={() => installSkill(s)} disabled={hubBusy}>
+                  instalar
+                </button>
+              </div>
+              <div class="body"><strong>{s.name}</strong></div>
+              <div class="faint small">{s.dir || "/"} · {s.files} arquivos</div>
+            </div>
+          {:else}
+            <div class="empty">{hubBusy ? "carregando…" : "nenhuma skill"}</div>
+          {/each}
+        </div>
+      {/if}
     {:else}
       <div class="toolbar">
         <button class="mini" onclick={newSkill}>+ nova skill</button>
+        <button class="mini" onclick={() => { skillView = "hub"; searchSkillsHub(); }}>
+          hub
+        </button>
         <button class="mini" onclick={async () => { await app.loadSkills(); skills = app.skills; }}>↻</button>
       </div>
       <div class="entries">
@@ -432,15 +626,31 @@
     flex-direction: column;
     min-height: 0;
   }
+  .tabbar {
+    display: flex;
+    align-items: stretch;
+    border-bottom: 1px solid var(--border-soft);
+    flex: 0 0 auto;
+    min-width: 0;
+  }
   .tabs {
     display: flex;
     align-items: center;
     gap: 2px;
-    padding: 8px 8px 0;
-    border-bottom: 1px solid var(--border-soft);
+    padding: 8px 4px 0 8px;
     overflow-x: auto;
-    scrollbar-width: thin;
+    scrollbar-width: none;
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .tabs::-webkit-scrollbar {
+    height: 0;
+  }
+  .close {
     flex: 0 0 auto;
+    align-self: flex-start;
+    margin: 6px 6px 0 2px;
+    padding: 0 6px;
   }
   .tab {
     white-space: nowrap;
@@ -487,11 +697,17 @@
     display: flex;
     gap: 6px;
     align-items: center;
+    flex-wrap: wrap;
     padding: 4px 11px 8px;
   }
   .mini {
     font-size: 10.5px;
     padding: 3px 8px;
+  }
+  .mini.sel {
+    background: var(--panel-2);
+    border-color: var(--accent);
+    color: var(--text);
   }
   .mini.primary {
     background: #2f4f8f;

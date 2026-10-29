@@ -2,6 +2,7 @@
 
 mod attachments;
 mod files;
+mod hub;
 mod mcp;
 mod memory;
 mod pi;
@@ -176,6 +177,35 @@ fn mcp_servers() -> Vec<mcp::McpServer> {
 }
 
 #[tauri::command]
+fn hub_mcp_search(query: String, limit: Option<u32>) -> Result<Vec<hub::McpCandidate>, String> {
+    hub::mcp_search(&query, limit.unwrap_or(30))
+}
+
+#[tauri::command]
+fn hub_skills_search(query: String, limit: Option<u32>) -> Result<Vec<hub::RepoCandidate>, String> {
+    hub::skills_search(&query, limit.unwrap_or(15))
+}
+
+#[tauri::command]
+fn hub_skills_in_repo(repo: String) -> Result<Vec<hub::SkillCandidate>, String> {
+    hub::skills_in_repo(&repo)
+}
+
+#[tauri::command]
+fn hub_skill_install(
+    repo: String,
+    dir: String,
+    rename: Option<String>,
+) -> Result<String, String> {
+    hub::skill_install(&repo, &dir, rename)
+}
+
+#[tauri::command]
+fn hub_skills_dir() -> String {
+    hub::skills_dir_path()
+}
+
+#[tauri::command]
 fn mcp_save(config: serde_json::Value) -> Result<(), String> {
     mcp::save_config(config)
 }
@@ -313,6 +343,11 @@ pub fn run() {
             mcp_servers,
             mcp_save,
             mcp_check,
+            hub_mcp_search,
+            hub_skills_search,
+            hub_skills_in_repo,
+            hub_skill_install,
+            hub_skills_dir,
             attachment_read,
             attachment_stage,
             attachment_save_b64,
