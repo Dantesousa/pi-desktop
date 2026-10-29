@@ -17,13 +17,10 @@ export default defineConfig(() => ({
     port: 1420,
     strictPort: true,
     host: host || "127.0.0.1",
-    hmr: host
-      ? {
-          protocol: "ws",
-          host,
-          port: 1421,
-        }
-      : undefined,
+    // HMR off on purpose: partial updates left Svelte scoped-CSS hashes and the
+    // DOM out of sync (layout looked broken until a full reload). Reload with
+    // Ctrl+Shift+R inside the app after changing frontend code.
+    hmr: false,
     watch: {
       // 3. tell Vite to ignore watching `src-tauri`
       ignored: ["**/src-tauri/**"],

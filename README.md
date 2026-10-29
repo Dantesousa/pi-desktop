@@ -120,6 +120,18 @@ git tag v0.1.2 && git push origin v0.1.2
 
 ## Development notes
 
+- Global CSS lives in `static/theme.css` and is linked from `app.html`, so it is
+  never injected by HMR (a stale stylesheet used to make the whole layout look
+  broken). Component styles stay scoped in their `.svelte` files.
+- HMR is disabled in `vite.config.js`; after changing frontend code press
+  `Ctrl+Shift+R` inside the app. Vite's HMR occasionally left scoped-CSS hashes
+  and the DOM out of sync, which is what "the UI broke" looked like.
+- If the shell ever renders stacked, the app reloads itself once and then writes
+  a diagnostic bundle.
+- `node scripts/shot.mjs <url> <out.png> [waitMs]` loads the dev URL in headless
+  Firefox (playwright-core + the cached build), screenshots it and prints DOM
+  metrics as JSON — the way to check layout without a human looking at it.
+
 - Use `npm run dev:clean` instead of `npm run tauri dev`: it frees a stale
   listener on port 1420 first (an orphan Vite from an earlier session otherwise
   makes `beforeDevCommand` fail and takes the app down with it).

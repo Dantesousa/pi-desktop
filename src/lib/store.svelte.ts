@@ -441,6 +441,7 @@ class AppState {
     await this.loadSessions();
     this.syncSessionMeta(this.active);
     this.startPolling();
+    setTimeout(() => void this.selfCheckLayout(), 2500);
   }
 
   async connect(opts: { session?: string; cwd?: string; tab?: Tab } = {}) {
@@ -984,6 +985,41 @@ class AppState {
     this.skills = await api.skillsList();
   }
 
+  /** If the shell is not laid out as a flex row, save a diagnostic automatically. */
+  async selfCheckLayout() {
+    const shell = document.querySelector(".shell") as HTMLElement | null;
+    const main = document.querySelector("main") as HTMLElement | null;
+    const aside = document.querySelector("aside") as HTMLElement | null;
+    const cs = shell ? getComputedStyle(shell) : null;
+    const stacked = !!aside && !!main && main.getBoundingClientRect().y > aside.getBoundingClientRect().bottom - 4;
+    const broken =
+      !shell ||
+      cs?.display !== "flex" ||
+      stacked ||
+      document.body.scrollHeight > window.innerHeight + 40;
+    if (!broken) {
+      try {
+        sessionStorage.removeItem("pi.layoutReloaded");
+      } catch {
+        /* ignore */
+      }
+      return;
+    }
+    // stale stylesheet in the webview: reload once, then only report
+    let alreadyReloaded = false;
+    try {
+      alreadyReloaded = sessionStorage.getItem("pi.layoutReloaded") === "1";
+      sessionStorage.setItem("pi.layoutReloaded", "1");
+    } catch {
+      /* ignore */
+    }
+    if (!alreadyReloaded) {
+      location.reload();
+      return;
+    }
+    void this.dumpDiagnostics().catch(() => {});
+  }
+
   /** Dumps everything an agent needs to debug the UI without a screenshot. */
   async dumpDiagnostics() {
     const rect = (sel: string) => {
@@ -1034,6 +1070,16 @@ class AppState {
           error: part.isError,
         })),
         error: m.error ?? null,
+      })),
+      sheets: Array.from(document.styleSheets).map((sheet: any) => ({
+        href: sheet.href ?? "(inline)",
+        rules: (() => {
+          try {
+            return sheet.cssRules?.length ?? -1;
+          } catch {
+            return -2;
+          }
+        })(),
       })),
       layout: {
         window: { w: window.innerWidth, h: window.innerHeight },
