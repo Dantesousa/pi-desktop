@@ -21,6 +21,16 @@ export type UiRequest = {
 
 export type Toast = { id: string; text: string; kind: "info" | "warn" | "error" | "ok" };
 
+export type DialogState = {
+  kind: "confirm" | "prompt";
+  title: string;
+  message?: string;
+  value?: string;
+  placeholder?: string;
+  confirmLabel?: string;
+  danger?: boolean;
+};
+
 function newMsg(init: any): Msg {
   const m = $state(init) as Msg;
   return m;
@@ -145,6 +155,8 @@ class AppState {
   tabs = $state<Tab[]>([]);
   activeId = $state("");
   chips = $state<Chip[]>([]);
+  dialog = $state<DialogState | null>(null);
+  private dialogResolve: ((v: any) => void) | null = null;
   toasts = $state<Toast[]>([]);
   requests = $state<UiRequest[]>([]);
   stderr = $state<string[]>([]);
@@ -838,6 +850,40 @@ class AppState {
   }
 
   // ── ui helpers ────────────────────────────────────────────────────────
+  /** In-app confirm (webview's window.confirm is unreliable in WebKitGTK). */
+  askConfirm(opts: {
+    title: string;
+    message?: string;
+    confirmLabel?: string;
+    danger?: boolean;
+  }): Promise<boolean> {
+    this.dialog = { kind: "confirm", ...opts };
+    return new Promise((resolve) => {
+      this.dialogResolve = (v) => resolve(v === true);
+    });
+  }
+
+  /** In-app text prompt returning null when cancelled. */
+  askPrompt(opts: {
+    title: string;
+    message?: string;
+    value?: string;
+    placeholder?: string;
+    confirmLabel?: string;
+  }): Promise<string | null> {
+    this.dialog = { kind: "prompt", ...opts };
+    return new Promise((resolve) => {
+      this.dialogResolve = (v) => resolve(typeof v === "string" ? v : null);
+    });
+  }
+
+  resolveDialog(value: any) {
+    const resolve = this.dialogResolve;
+    this.dialog = null;
+    this.dialogResolve = null;
+    resolve?.(value);
+  }
+
   toast(text: string, kind: Toast["kind"] = "info") {
     const id = uid();
     this.toasts.push({ id, text, kind });

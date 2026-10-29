@@ -85,7 +85,13 @@
 
   async function remove(i: number) {
     if (!file) return;
-    if (!confirm("Apagar esta entrada da memória?")) return;
+    const ok = await app.askConfirm({
+      title: "Apagar entrada da memória?",
+      message: (file.entries[i].body ?? "").slice(0, 200),
+      confirmLabel: "apagar",
+      danger: true,
+    });
+    if (!ok) return;
     const raws = file.entries.map((e) => e.raw).filter((_, idx) => idx !== i);
     await saveAll(raws);
   }
@@ -134,7 +140,12 @@
   }
 
   async function newSkill() {
-    const name = prompt("nome da skill (slug):");
+    const name = await app.askPrompt({
+      title: "Nova skill",
+      message: "slug em minúsculas, ex: rimworld-1-7-dev",
+      placeholder: "nome-da-skill",
+      confirmLabel: "criar",
+    });
     if (!name) return;
     const body = `---\nname: ${name}\ndescription: descreva quando usar esta skill (o gatilho que o usuário digita)\n---\n\n## When to Use\n\n- \n\n## Procedure\n\n1. \n\n## Pitfalls\n\n- \n\n## Verification\n\n- \n`;
     try {
@@ -184,7 +195,13 @@
   }
 
   async function removeServer(name: string) {
-    if (!confirm(`Remover o servidor MCP "${name}"?`)) return;
+    const ok = await app.askConfirm({
+      title: "Remover servidor MCP?",
+      message: `"${name}" será removido de ~/.pi/agent/mcp.json (backup automático).`,
+      confirmLabel: "remover",
+      danger: true,
+    });
+    if (!ok) return;
     await saveMcp((cfg) => {
       delete cfg.mcpServers[name];
     });

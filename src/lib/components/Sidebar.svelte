@@ -33,13 +33,25 @@
   }
 
   async function rename(s: any) {
-    const name = prompt("novo nome da sessão:", s.name ?? "");
+    const name = await app.askPrompt({
+      title: "Renomear sessão",
+      message: s.path.split("/").pop(),
+      value: s.name ?? "",
+      placeholder: "nome da sessão",
+      confirmLabel: "renomear",
+    });
     if (name == null) return;
     await app.renameSession(s, name);
   }
 
   async function remove(s: any) {
-    if (!confirm(`Mover a sessão "${s.name ?? s.id.slice(0, 8)}" para a lixeira?`)) return;
+    const ok = await app.askConfirm({
+      title: "Apagar sessão?",
+      message: `"${s.name ?? s.id.slice(0, 8)}" vai para a lixeira do app (~/.cache/pi-desktop/trash/sessions). Dá pra recuperar de lá.`,
+      confirmLabel: "mover para a lixeira",
+      danger: true,
+    });
+    if (!ok) return;
     await app.deleteSession(s);
   }
 </script>
@@ -84,7 +96,9 @@
     <button class="ghost" class:active={app.showMemory} onclick={() => (app.showMemory = !app.showMemory)}>
       🧠 memória
     </button>
-    <button class="ghost" title="paleta de comandos (Ctrl+K)" onclick={() => (app.showPalette = true)}>⌘K</button>
+    <button class="ghost" title="paleta de comandos (Ctrl+K)" onclick={() => (app.showPalette = true)}>
+      paleta
+    </button>
     <button class="ghost" title="atualizar sessões" onclick={() => app.loadSessions()}>⟳</button>
   </div>
 

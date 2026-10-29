@@ -10,6 +10,7 @@
   import MemoryPanel from "$lib/components/MemoryPanel.svelte";
   import CommandPalette from "$lib/components/CommandPalette.svelte";
   import PromptDialog from "$lib/components/PromptDialog.svelte";
+  import Dialog from "$lib/components/Dialog.svelte";
 
   let scroller = $state<HTMLElement | null>(null);
   let stick = $state(true);
@@ -121,6 +122,7 @@
 
 <CommandPalette />
 <PromptDialog />
+<Dialog />
 
 <div class="toasts">
   {#each app.toasts as t (t.id)}

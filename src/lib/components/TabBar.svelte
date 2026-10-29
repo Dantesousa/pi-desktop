@@ -11,9 +11,14 @@
         role="button"
         tabindex="-1"
         title="duplo clique para renomear"
-        ondblclick={(e) => {
+        ondblclick={async (e) => {
           e.stopPropagation();
-          const name = prompt("nome da aba:", tab.title);
+          const name = await app.askPrompt({
+            title: "Nome da aba",
+            value: tab.title,
+            placeholder: "nome da aba",
+            confirmLabel: "renomear",
+          });
           if (name != null) app.renameTab(tab.id, name);
         }}
         onkeydown={() => {}}

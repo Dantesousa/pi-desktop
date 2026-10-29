@@ -208,6 +208,41 @@ describe("tabs", () => {
   });
 });
 
+describe("in-app dialogs", () => {
+  it("askConfirm resolves true on accept and false on cancel", async () => {
+    const accepted = app.askConfirm({ title: "apagar?", danger: true });
+    expect(app.dialog?.kind).toBe("confirm");
+    expect(app.dialog?.danger).toBe(true);
+    app.resolveDialog(true);
+    await expect(accepted).resolves.toBe(true);
+
+    const cancelled = app.askConfirm({ title: "apagar?" });
+    app.resolveDialog(null);
+    await expect(cancelled).resolves.toBe(false);
+    expect(app.dialog).toBeNull();
+  });
+
+  it("askPrompt returns text or null", async () => {
+    const typed = app.askPrompt({ title: "nome", value: "atual" });
+    expect(app.dialog?.value).toBe("atual");
+    app.resolveDialog("novo nome");
+    await expect(typed).resolves.toBe("novo nome");
+
+    const cancelled = app.askPrompt({ title: "nome" });
+    app.resolveDialog(null);
+    await expect(cancelled).resolves.toBeNull();
+  });
+
+  it("a second dialog replaces the first only after it resolves", async () => {
+    const first = app.askConfirm({ title: "primeiro" });
+    app.resolveDialog(false);
+    await expect(first).resolves.toBe(false);
+    const second = app.askConfirm({ title: "segundo" });
+    app.resolveDialog(true);
+    await expect(second).resolves.toBe(true);
+  });
+});
+
 describe("run lifecycle", () => {
   it("flips working off when the agent settles", () => {
     const tab = freshTab();
