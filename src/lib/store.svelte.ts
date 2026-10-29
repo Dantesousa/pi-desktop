@@ -448,6 +448,10 @@ class AppState {
 
     if (!this.tabs.length) this.newTab();
     await this.connect();
+    document.addEventListener("hina:open-link", (e: any) => {
+      const url = e?.detail;
+      if (typeof url === "string") void this.openExternal(url);
+    });
     this.skills = await api.skillsList();
     await this.loadSessions();
     this.syncSessionMeta(this.active);
@@ -1056,6 +1060,10 @@ class AppState {
   }
 
   async loadSkills() {
+    document.addEventListener("hina:open-link", (e: any) => {
+      const url = e?.detail;
+      if (typeof url === "string") void this.openExternal(url);
+    });
     this.skills = await api.skillsList();
   }
 
@@ -1412,6 +1420,15 @@ class AppState {
   async exportHtml() {
     const res = await this.sendActive({ type: "export_html" });
     return res?.path as string | undefined;
+  }
+
+  async openExternal(url: string) {
+    try {
+      await api.openExternal(url);
+      this.toast(`aberto no navegador: ${url.slice(0, 60)}`, "info");
+    } catch (e: any) {
+      this.toast(`não consegui abrir: ${e?.message ?? e}`, "error");
+    }
   }
 
   /** Hands a request to the agent by filling the composer. */

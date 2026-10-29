@@ -59,6 +59,11 @@ fn pi_self_update() -> Result<String, String> {
 }
 
 #[tauri::command]
+fn open_external(url: String) -> Result<(), String> {
+    files::open_external(&url)
+}
+
+#[tauri::command]
 fn file_snapshot(path: String) -> Result<files::FileSnapshot, String> {
     files::snapshot(&path)
 }
@@ -335,6 +340,7 @@ pub fn run() {
             write_diagnostics,
             pi_version,
             pi_self_update,
+            open_external,
             file_snapshot,
             file_restore,
             pi_stop_all,

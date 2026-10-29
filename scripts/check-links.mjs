@@ -1,0 +1,21 @@
+import { firefox } from "playwright-core";
+import fs from "node:fs";
+const dir = fs.readdirSync(`${process.env.HOME}/.cache/ms-playwright`).filter(d=>d.startsWith("firefox-")).sort().pop();
+const browser = await firefox.launch({ executablePath: `${process.env.HOME}/.cache/ms-playwright/${dir}/firefox/firefox`, headless: true });
+const page = await browser.newPage({ viewport: { width: 1280, height: 860 } });
+await page.goto("http://127.0.0.1:1420/", { waitUntil: "domcontentloaded" });
+await page.waitForTimeout(2000);
+let dispatched = null;
+await page.evaluate(() => {
+  document.addEventListener("hina:open-link", (e) => { window.__lastLink = e.detail; });
+  const d = document.createElement("div");
+  d.innerHTML = '<a id="tlink" href="https://example.com/">link de teste</a>';
+  document.body.appendChild(d);
+});
+await page.click("#tlink");
+await page.waitForTimeout(700);
+const url = page.url();
+const got = await page.evaluate(() => window.__lastLink ?? null);
+console.log(JSON.stringify({ stayedInApp: url.startsWith("http://127.0.0.1:1420"), url, eventPayload: got }, null, 2));
+if (!url.startsWith("http://127.0.0.1:1420") || got !== "https://example.com/") process.exit(1);
+await browser.close();

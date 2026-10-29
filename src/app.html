@@ -6,6 +6,22 @@
     <link rel="stylesheet" href="%sveltekit.assets%/theme.css" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Hina · pi desktop</title>
+    <script>
+      // Links must never navigate the app webview (there is no back button).
+      document.addEventListener(
+        "click",
+        function (e) {
+          var a = e.target && e.target.closest ? e.target.closest("a[href]") : null;
+          if (!a) return;
+          var href = a.getAttribute("href") || "";
+          if (!href || href.charAt(0) === "#") return;
+          e.preventDefault();
+          e.stopPropagation();
+          document.dispatchEvent(new CustomEvent("hina:open-link", { detail: a.href }));
+        },
+        true,
+      );
+    </script>
     %sveltekit.head%
   </head>
   <body data-sveltekit-preload-data="hover">

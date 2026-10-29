@@ -159,3 +159,32 @@ pub fn write_diagnostics(payload: &str) -> Result<String, String> {
     fs::write(&path, payload).map_err(|e| format!("falha ao gravar diagnóstico: {e}"))?;
     Ok(path.to_string_lossy().into_owned())
 }
+
+/// Opens a URL in the user's browser instead of navigating the app webview.
+pub fn open_external(url: &str) -> Result<(), String> {
+    let url = url.trim();
+    let allowed = url.starts_with("http://")
+        || url.starts_with("https://")
+        || url.starts_with("mailto:")
+        || url.starts_with("ftp://");
+    if !allowed {
+        return Err("só abro http(s), mailto e ftp".into());
+    }
+    let candidates: [(&str, Vec<&str>); 3] = [
+        ("xdg-open", vec![url]),
+        ("gio", vec!["open", url]),
+        ("kde-open5", vec![url]),
+    ];
+    for (bin, args) in candidates {
+        if std::process::Command::new(bin)
+            .args(&args)
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .spawn()
+            .is_ok()
+        {
+            return Ok(());
+        }
+    }
+    Err("nenhum abridor disponível (xdg-open/gio)".into())
+}
