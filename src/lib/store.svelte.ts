@@ -1294,6 +1294,13 @@ class AppState {
     return res?.path as string | undefined;
   }
 
+  /** Hands a request to the agent by filling the composer. */
+  askAgent(text: string) {
+    this.draftRestore = text;
+    this.focusToken++;
+    this.toast("pedido pronto no campo — revise e envie", "info");
+  }
+
   async syncMemoryIndex() {
     try {
       await this.sendActive({ type: "prompt", message: "/memory-sync-markdown" });

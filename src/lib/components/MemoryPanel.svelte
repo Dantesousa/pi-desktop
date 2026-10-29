@@ -475,6 +475,16 @@
               <span class="cat">{c.kind}</span>
               <span class="faint small">{c.title || c.name}</span>
               <span class="spacer"></span>
+              <button
+                class="mini"
+                title="pedir ao agente para configurar"
+                onclick={() =>
+                  app.askAgent(
+                    `Configure o servidor MCP "${c.name}" em ~/.pi/agent/mcp.json.\nDados do registro oficial: ${c.target}${c.description ? `\nDescrição: ${c.description}` : ""}\nUse a mesma estrutura dos outros servidores e valide com \`pi mcp list\`.`,
+                  )}
+              >
+                🤖
+              </button>
               <button class="mini primary" onclick={() => addCandidate(c)}>+ add</button>
             </div>
             <div class="faint small">{c.description}</div>
@@ -577,6 +587,16 @@
             <div class="entry">
               <div class="ehead">
                 <span class="spacer"></span>
+                <button
+                  class="mini"
+                  title="pedir ao agente para instalar/adaptar"
+                  onclick={() =>
+                    app.askAgent(
+                      `Instale a skill "${s.name}" de ${activeRepo} (diretório ${s.dir || "/"}) em ~/.pi/agent/pi-hermes-memory/skills/ e ajuste o SKILL.md se necessário.`,
+                    )}
+                >
+                  🤖
+                </button>
                 <button class="mini primary" onclick={() => installSkill(s)} disabled={hubBusy}>
                   instalar
                 </button>
