@@ -129,6 +129,21 @@ fn session_delete(path: String) -> Result<String, String> {
 }
 
 #[tauri::command]
+fn session_holders(state: tauri::State<PiState>, path: String) -> Vec<memory::Holder> {
+    let own: Vec<u32> = state
+        .procs
+        .lock()
+        .map(|m| m.values().map(|r| r.pid).collect())
+        .unwrap_or_default();
+    memory::session_holders(&path, &own)
+}
+
+#[tauri::command]
+fn session_stat(path: String) -> memory::SessionStat {
+    memory::session_stat(&path)
+}
+
+#[tauri::command]
 fn skills_list() -> Vec<memory::SkillInfo> {
     memory::list_skills()
 }
@@ -287,6 +302,8 @@ pub fn run() {
             sessions_list,
             session_rename,
             session_delete,
+            session_holders,
+            session_stat,
             skills_list,
             skill_read,
             skill_write,

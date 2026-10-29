@@ -34,6 +34,7 @@ It does not reimplement the agent: it spawns `pi --mode rpc` as a sidecar and sp
 - **Rename** (writes a `session_info` entry; uses `set_session_name` for the active one)
 - **Delete** — moves the `.jsonl` to the app trash (`~/.cache/pi-desktop/trash`), never `rm`
 - Full-text search across your history (SQLite FTS from `pi-hermes-memory`)
+- **External change detection**: warns when the session file was written by another process (e.g. a terminal `pi`) and when another process has it open; `F5` reloads it from disk
 
 **Memory (pi-hermes-memory)**
 - Read and edit `MEMORY.md`, `USER.md`, `failures.md` with usage meters against the char limits
@@ -46,7 +47,7 @@ It does not reimplement the agent: it spawns `pi --mode rpc` as a sidecar and sp
 - Extension UI dialogs (`select`, `confirm`, `input`, `editor`) render as native modals
 - Cost limit with warning banner, context-window meter, session stats
 - **MCP manager**: list / enable / disable / add servers in `~/.pi/agent/mcp.json`, and test connections
-- Tray icon, close-to-tray, global quick-ask (`Ctrl+Alt+H`)
+- Tray icon, close-to-tray, global quick-ask (`Ctrl+Alt+H`), and a diagnostics dump (`Ctrl+Shift+D`) that writes the full UI state to `~/.cache/pi-desktop/diagnostics/`
 - Desktop notification when a long task finishes while the window is unfocused
 - Command palette (`Ctrl+K`), light/dark themes, HTML export
 - **Pi self-update**: check the latest version and update the sidecar from the settings popover

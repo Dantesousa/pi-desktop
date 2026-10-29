@@ -661,3 +661,146 @@ pub fn delete_session(path: &str) -> Result<String, String> {
     fs::rename(&p, &dest).map_err(|e| format!("falha ao mover sessão: {e}"))?;
     Ok(dest.to_string_lossy().into_owned())
 }
+
+// ── session holders / external change detection ──────────────────────────────
+
+#[derive(Serialize, Clone, Debug)]
+pub struct Holder {
+    pub pid: i32,
+    pub cmd: String,
+}
+
+#[derive(Serialize, Clone)]
+pub struct SessionStat {
+    pub len: u64,
+    pub mtime_ms: u64,
+}
+
+pub fn session_stat(path: &str) -> SessionStat {
+    let meta = fs::metadata(path).ok();
+    SessionStat {
+        len: meta.as_ref().map(|m| m.len()).unwrap_or(0),
+        mtime_ms: meta
+            .and_then(|m| m.modified().ok())
+            .and_then(|t| t.duration_since(UNIX_EPOCH).ok())
+            .map(|d| d.as_millis() as u64)
+            .unwrap_or(0),
+    }
+}
+
+fn process_label(pid: u32) -> String {
+    let cmdline = fs::read_to_string(format!("/proc/{pid}/cmdline")).unwrap_or_default();
+    let joined = cmdline
+        .split('\0')
+        .filter(|s| !s.is_empty())
+        .collect::<Vec<_>>()
+        .join(" ");
+    if joined.is_empty() {
+        fs::read_to_string(format!("/proc/{pid}/comm"))
+            .map(|s| s.trim().to_string())
+            .unwrap_or_default()
+    } else {
+        joined.chars().take(120).collect()
+    }
+}
+
+/// Processes (other than this app and its sidecars) holding `path` open.
+pub fn session_holders(path: &str, own_pids: &[u32]) -> Vec<Holder> {
+    let target = fs::canonicalize(path).unwrap_or_else(|_| PathBuf::from(path));
+    let me = std::process::id();
+    let mut out = Vec::new();
+
+    let Ok(entries) = fs::read_dir("/proc") else {
+        return out;
+    };
+    for entry in entries.flatten() {
+        let name = entry.file_name().to_string_lossy().into_owned();
+        let Ok(pid) = name.parse::<u32>() else {
+            continue;
+        };
+        if pid == me || own_pids.contains(&pid) {
+            continue;
+        }
+        let Ok(fds) = fs::read_dir(format!("/proc/{pid}/fd")) else {
+            continue;
+        };
+        let holds = fds.flatten().any(|fd| {
+            fs::read_link(fd.path())
+                .map(|p| p == target)
+                .unwrap_or(false)
+        });
+        if holds {
+            out.push(Holder {
+                pid: pid as i32,
+                cmd: process_label(pid),
+            });
+        }
+    }
+    out.sort_by_key(|h| h.pid);
+    out.truncate(10);
+    out
+}
+
+#[cfg(test)]
+mod holder_tests {
+    use super::*;
+    use std::process::{Command, Stdio};
+    use std::time::Duration;
+
+    fn tmp(name: &str) -> PathBuf {
+        std::env::temp_dir().join(format!("pi-holders-{}-{}", std::process::id(), name))
+    }
+
+    #[test]
+    fn detects_another_process_holding_the_session() {
+        let path = tmp("held.jsonl");
+        fs::write(&path, "{\"type\":\"session\"}\n").unwrap();
+
+        let mut child = Command::new("tail")
+            .arg("-f")
+            .arg(&path)
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .spawn()
+            .expect("tail disponível");
+        std::thread::sleep(Duration::from_millis(400));
+
+        let holders = session_holders(path.to_str().unwrap(), &[]);
+        let found = holders.iter().any(|h| h.pid == child.id() as i32);
+        let _ = child.kill();
+        let _ = child.wait();
+        let _ = fs::remove_file(&path);
+        assert!(found, "esperava encontrar o pid {} em {:?}", child.id(), holders);
+    }
+
+    #[test]
+    fn ignores_own_pids() {
+        let path = tmp("own.jsonl");
+        fs::write(&path, "{}\n").unwrap();
+        let mut child = Command::new("tail")
+            .arg("-f")
+            .arg(&path)
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .spawn()
+            .unwrap();
+        std::thread::sleep(Duration::from_millis(400));
+
+        let holders = session_holders(path.to_str().unwrap(), &[child.id()]);
+        let found = holders.iter().any(|h| h.pid == child.id() as i32);
+        let _ = child.kill();
+        let _ = child.wait();
+        let _ = fs::remove_file(&path);
+        assert!(!found, "não deveria listar os próprios sidecars");
+    }
+
+    #[test]
+    fn stat_reports_size_and_mtime() {
+        let path = tmp("stat.jsonl");
+        fs::write(&path, "12345").unwrap();
+        let st = session_stat(path.to_str().unwrap());
+        let _ = fs::remove_file(&path);
+        assert_eq!(st.len, 5);
+        assert!(st.mtime_ms > 0);
+    }
+}

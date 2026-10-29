@@ -84,6 +84,12 @@
         <button class="mini" onclick={() => app.connect()}>tentar de novo</button>
       </div>
     {/if}
+    {#if app.active?.externalChange}
+      <div class="banner info">
+        🔄 esta sessão mudou no disco (outro processo escreveu nela)
+        <button class="mini" onclick={() => app.reloadSession()}>recarregar (F5)</button>
+      </div>
+    {/if}
     {#if app.costWarn}
       <div class="banner warn">
         💸 custo desta sessão (${app.cost.toFixed(2)}) passou do limite de ${app.costLimit.toFixed(2)}
@@ -143,6 +149,11 @@
     display: flex;
     gap: 10px;
     align-items: center;
+  }
+  .banner.info {
+    background: #16202e;
+    border-bottom-color: #26374d;
+    color: #a9c7ff;
   }
   .banner.warn {
     background: #2a2415;

@@ -48,6 +48,8 @@ export const api = {
   sessionsList: async (limit = 60) => camel(await invoke<SessionInfo[]>("sessions_list", { limit })),
   sessionRename: (path: string, name: string) => invoke<void>("session_rename", { path, name }),
   sessionDelete: (path: string) => invoke<string>("session_delete", { path }),
+  sessionHolders: async (path: string) => camel(await invoke<any[]>("session_holders", { path })),
+  sessionStat: async (path: string) => camel(await invoke<any>("session_stat", { path })),
   skillsList: async () => camel(await invoke<SkillInfo[]>("skills_list")),
   skillRead: (path: string) => invoke<string>("skill_read", { path }),
   skillWrite: (path: string, content: string) => invoke<void>("skill_write", { path, content }),

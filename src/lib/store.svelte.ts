@@ -76,6 +76,9 @@ export class Tab {
   sessionId = $state<string | null>(null);
   sessionName = $state<string | null>(null);
   sessionFile = $state<string | null>(null);
+  externalChange = $state(false);
+  holders = $state<{ pid: number; cmd: string }[]>([]);
+  lastLen = $state<number | null>(null);
   pending = $state(0);
   currentKey = $state<string | null>(null);
   taskStartedAt = $state<number | null>(null);
@@ -178,6 +181,7 @@ class AppState {
   thinking = $state(localStorage.getItem("pi.thinking") || "medium");
 
   private listeners: UnlistenFn[] = [];
+  private pollTimer: number | null = null;
   private waiting = new Map<string, { resolve: (v: any) => void; reject: (e: any) => void; timer: number }>();
   private booted = false;
   private notificationsAllowed: boolean | null = null;
@@ -336,6 +340,8 @@ class AppState {
     await this.connect();
     this.skills = await api.skillsList();
     await this.loadSessions();
+    this.syncSessionMeta(this.active);
+    this.startPolling();
   }
 
   async connect(opts: { session?: string; cwd?: string; tab?: Tab } = {}) {
@@ -370,6 +376,53 @@ class AppState {
       return await api.status(tabId);
     } catch {
       return null;
+    }
+  }
+
+  // ── external change detection ─────────────────────────────────────────
+  private startPolling() {
+    if (this.pollTimer != null) return;
+    this.pollTimer = window.setInterval(() => void this.pollSessions(), 8000);
+  }
+
+  private async pollSessions() {
+    for (const tab of this.tabs) {
+      const path = tab.sessionFile;
+      if (!path) continue;
+      try {
+        const st = await api.sessionStat(path);
+        if (tab.lastLen == null) {
+          tab.lastLen = st.len;
+          continue;
+        }
+        if (st.len !== tab.lastLen) {
+          tab.lastLen = st.len;
+          // writes while a run is in flight are our own
+          if (!tab.working && !tab.streaming) tab.externalChange = true;
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+  }
+
+  /** Records the current file size as "ours" and checks who else holds the file. */
+  async syncSessionMeta(tab = this.active, checkHolders = true) {
+    if (!tab?.sessionFile) return;
+    try {
+      const st = await api.sessionStat(tab.sessionFile);
+      tab.lastLen = st.len;
+      tab.externalChange = false;
+      if (checkHolders) {
+        const holders = await api.sessionHolders(tab.sessionFile);
+        tab.holders = holders;
+        if (holders.length) {
+          const who = holders.map((h) => `pid ${h.pid}`).join(", ");
+          this.toast(`esta sessão também está aberta em outro processo (${who})`, "warn");
+        }
+      }
+    } catch {
+      /* ignore */
     }
   }
 
@@ -611,6 +664,7 @@ class AppState {
       const history = await this.send(tab.id, { type: "get_messages" });
       this.hydrate(tab, history?.messages ?? []);
       await this.refreshStats(tab);
+      await this.syncSessionMeta(tab, false);
       this.toast("sessão recarregada do disco", "ok");
     } catch (e: any) {
       this.toast(`recarregar falhou: ${e?.message ?? e}`, "error");
@@ -626,6 +680,7 @@ class AppState {
     const history = await this.send(tab.id, { type: "get_messages" });
     this.hydrate(tab, history?.messages ?? []);
     await this.refreshStats(tab);
+    await this.syncSessionMeta(tab);
   }
 
   private hydrate(tab: Tab, messages: any[]) {
@@ -1133,6 +1188,7 @@ class AppState {
         tab.currentKey = null;
         this.refreshStats(tab);
         this.loadSessions();
+        this.syncSessionMeta(tab, false);
         const elapsed = tab.taskStartedAt ? Date.now() - tab.taskStartedAt : 0;
         tab.taskStartedAt = null;
         if (wasWorking && elapsed > 12000 && !document.hasFocus()) {
