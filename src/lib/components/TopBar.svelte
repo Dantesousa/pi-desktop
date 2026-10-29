@@ -118,6 +118,7 @@
       <span class="queue">{app.pending} na fila</span>
     {/if}
 
+    <button class="ghost" title="Recarregar sessão do disco (F5)" onclick={() => app.reloadSession()}>↻</button>
     <button class="ghost" title="Exportar HTML" onclick={exportHtml}>⤓</button>
     <button
       class="ghost"

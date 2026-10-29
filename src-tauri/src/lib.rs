@@ -334,11 +334,20 @@ pub fn run() {
                         }
                     }
                     "quit" => {
-                        if let Some(state) = app.try_state::<PiState>() {
-                            if let Ok(map) = state.procs.lock() {
-                                for tab in map.keys().cloned().collect::<Vec<_>>() {
-                                    let _ = pi::stop(&state, &tab);
-                                }
+                        // collect the tab ids and drop the lock before stopping:
+                        // pi::stop() takes the same (non-reentrant) mutex.
+                        let tabs = app
+                            .try_state::<PiState>()
+                            .and_then(|st| {
+                                st.procs
+                                    .lock()
+                                    .ok()
+                                    .map(|m| m.keys().cloned().collect::<Vec<_>>())
+                            })
+                            .unwrap_or_default();
+                        if let Some(st) = app.try_state::<PiState>() {
+                            for tab in tabs {
+                                let _ = pi::stop(&st, &tab);
                             }
                         }
                         app.exit(0);
@@ -368,11 +377,18 @@ pub fn run() {
                 let _ = window.hide();
             }
             tauri::WindowEvent::Destroyed => {
-                if let Some(state) = window.try_state::<PiState>() {
-                    if let Ok(map) = state.procs.lock() {
-                        for tab in map.keys().cloned().collect::<Vec<_>>() {
-                            let _ = pi::stop(&state, &tab);
-                        }
+                let tabs = window
+                    .try_state::<PiState>()
+                    .and_then(|st| {
+                        st.procs
+                            .lock()
+                            .ok()
+                            .map(|m| m.keys().cloned().collect::<Vec<_>>())
+                    })
+                    .unwrap_or_default();
+                if let Some(st) = window.try_state::<PiState>() {
+                    for tab in tabs {
+                        let _ = pi::stop(&st, &tab);
                     }
                 }
             }

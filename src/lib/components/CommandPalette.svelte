@@ -25,6 +25,13 @@
         run: () => app.compact(),
       },
       {
+        id: "reload",
+        label: "Recarregar sessão do disco (F5)",
+        hint: "pega mensagens escritas em outro processo",
+        group: "ação",
+        run: () => app.reloadSession(),
+      },
+      {
         id: "export",
         label: "Exportar sessão em HTML",
         group: "ação",

@@ -116,6 +116,19 @@
         <pre class="args">{argsJson}</pre>
       {/if}
 
+      {#if part.images?.length}
+        <div class="label">imagens ({part.images.length})</div>
+        <div class="thumbs">
+          {#each part.images as img, i}
+            <img
+              src={`data:${img.mimeType};base64,${img.data}`}
+              alt={`resultado ${i + 1}`}
+              onclick={() => window.open(`data:${img.mimeType};base64,${img.data}`, "_blank")}
+            />
+          {/each}
+        </div>
+      {/if}
+
       {#if output}
         <div class="label">
           resultado
@@ -249,6 +262,19 @@
     padding: 1px 6px;
     font-size: 10px;
     border-radius: 5px;
+  }
+  .thumbs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+  }
+  .thumbs img {
+    max-height: 220px;
+    max-width: 100%;
+    border-radius: 8px;
+    border: 1px solid var(--border-soft);
+    cursor: zoom-in;
+    background: #0c1017;
   }
   .revertrow {
     display: flex;

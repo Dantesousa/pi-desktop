@@ -202,7 +202,21 @@ pre {
 }
 .markdown img {
   max-width: 100%;
+  max-height: 460px;
   border-radius: 8px;
+  border: 1px solid var(--border-soft);
+  background: #0c1017;
+  cursor: zoom-in;
+}
+.markdown .img-missing {
+  display: inline-block;
+  font-size: 11px;
+  font-family: var(--mono);
+  color: var(--text-faint);
+  background: var(--bg-2);
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+  padding: 3px 8px;
 }
 
 /* highlight.js — tokyo night-ish */

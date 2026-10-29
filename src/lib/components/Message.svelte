@@ -1,5 +1,7 @@
 <script lang="ts">
   import { renderMarkdown, highlightAll } from "../markdown";
+  import { hydrateImages } from "../media";
+  import { app } from "../store.svelte";
   import ToolCard from "./ToolCard.svelte";
   import type { Msg } from "../types";
 
@@ -11,6 +13,7 @@
     // re-run when text changes
     msg.parts.map((p: any) => p.text?.length ?? 0).join(",");
     highlightAll(root);
+    hydrateImages(root, app.cwd);
   });
 </script>
 

@@ -5,6 +5,7 @@ import {
   sendNotification,
 } from "@tauri-apps/plugin-notification";
 import { api } from "./api";
+import { extractImages } from "./media";
 import type { Chip, Msg, ModelInfo, Part, SessionInfo, SkillInfo } from "./types";
 
 const uid = () => Math.random().toString(36).slice(2, 10);
@@ -74,6 +75,7 @@ export class Tab {
   stats = $state<any>(null);
   sessionId = $state<string | null>(null);
   sessionName = $state<string | null>(null);
+  sessionFile = $state<string | null>(null);
   pending = $state(0);
   currentKey = $state<string | null>(null);
   taskStartedAt = $state<number | null>(null);
@@ -592,6 +594,29 @@ class AppState {
     await this.loadSessions();
   }
 
+  /** Re-reads the session file from disk, picking up messages written elsewhere
+   *  (e.g. the same session used from the terminal). */
+  async reloadSession() {
+    const tab = this.active;
+    const path = tab.sessionFile;
+    if (!path) {
+      this.toast("sessão ainda não tem arquivo em disco", "warn");
+      return;
+    }
+    try {
+      await this.send(tab.id, { type: "switch_session", sessionPath: path });
+      tab.messages = [];
+      tab.currentKey = null;
+      await this.refreshState(tab);
+      const history = await this.send(tab.id, { type: "get_messages" });
+      this.hydrate(tab, history?.messages ?? []);
+      await this.refreshStats(tab);
+      this.toast("sessão recarregada do disco", "ok");
+    } catch (e: any) {
+      this.toast(`recarregar falhou: ${e?.message ?? e}`, "error");
+    }
+  }
+
   async switchSession(path: string) {
     const tab = this.active;
     await this.send(tab.id, { type: "switch_session", sessionPath: path });
@@ -648,6 +673,7 @@ class AppState {
       if (st?.thinkingLevel) tab.thinking = st.thinkingLevel;
       tab.sessionId = st?.sessionId ?? null;
       tab.sessionName = st?.sessionName ?? null;
+      if (st?.sessionFile) tab.sessionFile = st.sessionFile;
     } catch {
       /* ignore */
     }
@@ -1087,6 +1113,8 @@ class AppState {
           p.output = extractText(rec.result);
           p.isError = !!rec.isError;
           p.durationMs = rec.durationMs;
+          const imgs = extractImages(rec.result);
+          if (imgs.length) p.images = imgs;
         }
         tab.activity = "pensando…";
         break;

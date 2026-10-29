@@ -34,6 +34,9 @@
     } else if (mod && e.key.toLowerCase() === "m") {
       e.preventDefault();
       app.showMemory = !app.showMemory;
+    } else if (e.key === "F5") {
+      e.preventDefault();
+      app.reloadSession();
     } else if (mod && e.shiftKey && e.key.toLowerCase() === "d") {
       e.preventDefault();
       app.dumpDiagnostics();
