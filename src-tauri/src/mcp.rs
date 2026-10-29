@@ -155,8 +155,21 @@ fn script_candidates() -> Vec<PathBuf> {
     out
 }
 
+/// Copies the bundled browser MCP script into the cache dir so a packaged app
+/// still has it next to the user's config.
+fn write_bundled_script() -> Option<PathBuf> {
+    let dir = browser_cache();
+    std::fs::create_dir_all(&dir).ok()?;
+    let path = dir.join("mcp.mjs");
+    std::fs::write(&path, include_str!("../../scripts/browser-mcp.mjs")).ok()?;
+    Some(path)
+}
+
 pub fn browser_script() -> Option<PathBuf> {
-    script_candidates().into_iter().find(|p| p.is_file())
+    if let Some(found) = script_candidates().into_iter().find(|p| p.is_file()) {
+        return Some(found);
+    }
+    write_bundled_script()
 }
 
 #[derive(Serialize, Clone)]
