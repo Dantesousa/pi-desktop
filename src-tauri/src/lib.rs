@@ -356,8 +356,12 @@ pub fn run() {
         .setup(|app| {
             use tauri_plugin_global_shortcut::GlobalShortcutExt;
 
+            // window icon (fallback for X11; Wayland uses the .desktop file)
             if let Some(window) = app.get_webview_window("main") {
                 let _ = window.set_title("Hina · pi desktop");
+                if let Ok(icon) = tauri::image::Image::from_bytes(include_bytes!("../icons/128x128@2x.png")) {
+                    let _ = window.set_icon(icon);
+                }
             }
 
             // tray icon
@@ -366,8 +370,11 @@ pub fn run() {
             let quit = MenuItem::with_id(app, "quit", "Sair", true, None::<&str>)?;
             let menu = Menu::with_items(app, &[&show, &new_chat, &quit])?;
 
+            let tray_image = tauri::image::Image::from_bytes(include_bytes!("../icons/128x128@2x.png"))
+                .ok()
+                .or_else(|| app.default_window_icon().cloned());
             let _ = TrayIconBuilder::with_id("main-tray")
-                .icon(app.default_window_icon().cloned().unwrap())
+                .icon(tray_image.unwrap())
                 .tooltip("Hina · pi desktop")
                 .menu(&menu)
                 .show_menu_on_left_click(false)

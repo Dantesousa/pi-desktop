@@ -4,7 +4,7 @@
 
 use serde::Serialize;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::process::Command;
 
 fn curl(url: &str) -> Result<String, String> {
@@ -403,6 +403,7 @@ pub fn skills_dir_path() -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::path::Path;
 
     #[test]
     fn slugify_sanitizes_names() {
