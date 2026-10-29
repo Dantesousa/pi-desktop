@@ -93,3 +93,49 @@ pub fn restore(path: &str, content: Option<String>) -> Result<(), String> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn tmp(name: &str) -> PathBuf {
+        std::env::temp_dir().join(format!("pi-desktop-test-{}-{}", std::process::id(), name))
+    }
+
+    #[test]
+    fn snapshot_and_restore_existing_file() {
+        let path = tmp("edit.txt");
+        fs::write(&path, "antes\n").unwrap();
+
+        let snap = snapshot(path.to_str().unwrap()).unwrap();
+        assert!(snap.exists);
+        assert!(snap.can_restore);
+        assert_eq!(snap.content.as_deref(), Some("antes\n"));
+
+        fs::write(&path, "depois\n").unwrap();
+        restore(path.to_str().unwrap(), snap.content.clone()).unwrap();
+        assert_eq!(fs::read_to_string(&path).unwrap(), "antes\n");
+
+        let _ = fs::remove_file(&path);
+    }
+
+    #[test]
+    fn snapshot_of_missing_file_restores_by_deleting() {
+        let path = tmp("novo.txt");
+        let _ = fs::remove_file(&path);
+
+        let snap = snapshot(path.to_str().unwrap()).unwrap();
+        assert!(!snap.exists);
+        assert!(snap.can_restore);
+
+        fs::write(&path, "criado pela tool\n").unwrap();
+        restore(path.to_str().unwrap(), None).unwrap();
+        assert!(!path.exists());
+    }
+
+    #[test]
+    fn relative_paths_are_rejected() {
+        assert!(snapshot("relativo.txt").is_err());
+        assert!(restore("relativo.txt", None).is_err());
+    }
+}
