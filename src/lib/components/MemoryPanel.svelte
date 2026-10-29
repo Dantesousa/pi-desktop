@@ -59,10 +59,12 @@
     err = null;
     try {
       if (tab === "skills") {
+        file = null;
         skills = await api.skillsList();
         return;
       }
       if (tab === "mcp") {
+        file = null;
         mcpRaw = await api.mcpConfig();
         mcpServers = await api.mcpServers();
         return;
@@ -359,7 +361,7 @@
     <div class="err">{err}</div>
   {/if}
 
-  {#if tab !== "sessions" && tab !== "skills"}
+  {#if tab !== "sessions" && tab !== "skills" && tab !== "mcp"}
     {#if file}
       <div class="usage">
         <div class="ubar"><div class="ufill" style={`width:${pct}%`}></div></div>
