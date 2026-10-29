@@ -95,6 +95,8 @@ jobs:
 
       - run: npm ci
       - run: npm run build
+      - name: unit tests (store / RPC reducer)
+        run: npm test
       - name: cargo check
         working-directory: src-tauri
         run: cargo check --locked
