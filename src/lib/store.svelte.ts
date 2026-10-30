@@ -1153,6 +1153,22 @@ class AppState {
         })),
         error: m.error ?? null,
       })),
+      theme: this.theme,
+      accentOverride: this.accent,
+      colors: (() => {
+        const pick = (sel: string) => {
+          const el = document.querySelector(sel) as HTMLElement | null;
+          if (!el) return null;
+          const cs = getComputedStyle(el);
+          return { color: cs.color, bg: cs.backgroundColor };
+        };
+        return {
+          body: getComputedStyle(document.body).color,
+          pageBg: getComputedStyle(document.body).backgroundColor,
+          link: pick(".markdown a"),
+          code: pick(".markdown code"),
+        };
+      })(),
       sheets: Array.from(document.styleSheets).map((sheet: any) => ({
         href: sheet.href ?? "(inline)",
         rules: (() => {

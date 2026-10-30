@@ -19,6 +19,8 @@
   --bubble: #1b2333;
   --hover: #131926;
   --chat-font: 14px;
+  --link: #9fc0ff;
+  --code-ink: #a9c7ff;
   --mono: "JetBrains Mono", "Fira Code", "Cascadia Code", monospace;
   color-scheme: dark;
 }
@@ -153,9 +155,11 @@ pre {
 .markdown li {
   margin: 0.2em 0;
 }
-.markdown a {
-  color: var(--accent);
+.markdown a,
+.markdown a:visited {
+  color: var(--link, var(--accent));
   text-decoration: none;
+  overflow-wrap: anywhere;
 }
 .markdown a:hover {
   text-decoration: underline;
@@ -185,7 +189,7 @@ pre {
   border: 1px solid var(--border);
   padding: 1px 5px;
   border-radius: 5px;
-  color: #a9c7ff;
+  color: var(--code-ink);
 }
 .markdown pre {
   background: var(--code-bg);
@@ -297,7 +301,9 @@ pre {
   --red: #cf222e;
   --yellow: #9a6700;
   --code-bg: #f3f5fa;
-  --code-bg-2: #eef1f7;
+  --code-bg-2: #eceff5;
+  --link: #1a4fb4;
+  --code-ink: #1f3f86;
   --bubble: #eef2fb;
   --hover: #e9edf6;
   color-scheme: light;
@@ -370,6 +376,8 @@ pre {
   --yellow: #d7ff3d;
   --code-bg: #020a06;
   --code-bg-2: #082014;
+  --link: #39ff14;
+  --code-ink: #7dffa2;
   --bubble: #0b2418;
   --hover: #0a2014;
   color-scheme: dark;
@@ -443,6 +451,8 @@ pre {
   --yellow: #fe8019;
   --code-bg: #1e1e1e;
   --code-bg-2: #3c3836;
+  --link: #83a598;
+  --code-ink: #fabd2f;
   --bubble: #32302f;
   --hover: #35312c;
   color-scheme: dark;
@@ -531,6 +541,8 @@ pre {
   --yellow: #ffd166;
   --code-bg: #08040e;
   --code-bg-2: #1d0b33;
+  --link: #00e5ff;
+  --code-ink: #ffd1ec;
   --bubble: #1d0b33;
   --hover: #1a0a2e;
   color-scheme: dark;
