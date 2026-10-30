@@ -188,10 +188,10 @@ pub struct SkillCandidate {
 /// Known skill collections shown when the query is empty.
 fn curated_repos() -> Vec<RepoCandidate> {
     [
-        ("anthropics/skills", "coleção oficial de skills da Anthropic"),
-        ("obra/superpowers", "skills de workflow: brainstorming, planos, subagentes"),
-        ("affaan-m/ECC", "skills, memória e segurança para agentes"),
-        ("multica-ai/andrej-karpathy-skills", "boas práticas de código em forma de skill"),
+        ("anthropics/skills", "the official Anthropic skills collection"),
+        ("obra/superpowers", "workflow skills: brainstorming, plans, subagents"),
+        ("affaan-m/ECC", "skills, memory and security for agents"),
+        ("multica-ai/andrej-karpathy-skills", "code best practices as skills"),
     ]
     .iter()
     .map(|(name, desc)| RepoCandidate {
@@ -312,7 +312,7 @@ fn collect_files(
     let json: serde_json::Value = serde_json::from_str(&body).map_err(|e| e.to_string())?;
     let items = match json.as_array() {
         Some(a) => a.clone(),
-        None => return Err(format!("conteúdo de `{dir}` não é um diretório")),
+        None => return Err(format!("`{dir}` is not a directory")),
     };
     for item in items {
         let kind = item.get("type").and_then(|v| v.as_str()).unwrap_or("");
@@ -352,7 +352,7 @@ pub fn skill_install(repo: &str, dir: &str, rename: Option<String>) -> Result<St
     let mut files: Vec<(String, String)> = Vec::new();
     collect_files(repo, &dir, &branch, 0, &mut files)?;
     if !files.iter().any(|(p, _)| p.ends_with("SKILL.md")) {
-        return Err("este diretório não contém SKILL.md".into());
+        return Err("this directory has no SKILL.md".into());
     }
 
     let base_name = rename.unwrap_or_else(|| {
@@ -365,7 +365,7 @@ pub fn skill_install(repo: &str, dir: &str, rename: Option<String>) -> Result<St
     let slug = slugify(&base_name);
     let dest = skills_root().join(&slug);
     if !dest.starts_with(skills_root()) {
-        return Err("destino inválido".into());
+        return Err("invalid destination".into());
     }
     fs::create_dir_all(&dest).map_err(|e| e.to_string())?;
 
@@ -391,7 +391,7 @@ pub fn skill_install(repo: &str, dir: &str, rename: Option<String>) -> Result<St
         written += 1;
     }
     if written == 0 {
-        return Err("nenhum arquivo baixado".into());
+        return Err("no file downloaded".into());
     }
     Ok(dest.to_string_lossy().into_owned())
 }

@@ -159,7 +159,7 @@
       skillDirty = false;
       await app.loadSkills();
       skills = app.skills;
-      app.toast("skill salva", "ok");
+      app.toast(t("mem.skillSaved"), "ok");
     } catch (e: any) {
       err = String(e?.message ?? e);
     }
@@ -173,7 +173,7 @@
       confirmLabel: t("mem.skillCreate"),
     });
     if (!name) return;
-    const body = `---\nname: ${name}\ndescription: descreva quando usar esta skill (o gatilho que o usuário digita)\n---\n\n## When to Use\n\n- \n\n## Procedure\n\n1. \n\n## Pitfalls\n\n- \n\n## Verification\n\n- \n`;
+    const body = t("mem.skillTemplate", { name });
     try {
       const path = await api.skillCreate(name, body);
       await app.loadSkills();
@@ -188,10 +188,7 @@
   }
 
   async function consolidate() {
-    await app.prompt(
-      `Revise a memória persistente em ~/.pi/agent/pi-hermes-memory/ (MEMORY.md, USER.md, failures.md) e consolide entradas redundantes ou obsoletas usando as ferramentas memory_* / edit, respeitando os limites de caracteres. Não apague informação sobre preferências do usuário. Ao final, rode /memory-sync-markdown.`,
-      [],
-    );
+    await app.prompt(t("mem.consolidatePrompt"), []);
     app.toast(t("mem.consolidated"), "info");
   }
 
@@ -483,7 +480,11 @@
                 title={t("mem.askAgentConfig")}
                 onclick={() =>
                   app.askAgent(
-                    `Configure o servidor MCP "${c.name}" em ~/.pi/agent/mcp.json.\nDados do registro oficial: ${c.target}${c.description ? `\nDescrição: ${c.description}` : ""}\nUse a mesma estrutura dos outros servidores e valide com \`pi mcp list\`.`,
+                    t("mem.mcpConfigPrompt", {
+                      name: c.name,
+                      target: c.target,
+                      desc: c.description ? t("mem.mcpDescLine", { description: c.description }) : "",
+                    }),
                   )}
               >
                 🤖
@@ -593,7 +594,11 @@
                   title={t("mem.askAgentInstall")}
                   onclick={() =>
                     app.askAgent(
-                      `Instale a skill "${s.name}" de ${activeRepo} (diretório ${s.dir || "/"}) em ~/.pi/agent/pi-hermes-memory/skills/ e ajuste o SKILL.md se necessário.`,
+                      t("mem.skillInstallPrompt", {
+                        name: s.name ?? "",
+                        repo: activeRepo ?? "",
+                        dir: s.dir || "/",
+                      }),
                     )}
                 >
                   🤖
@@ -601,7 +606,7 @@
                 <button class="mini primary" onclick={() => installSkill(s)} disabled={hubBusy}>{t("mem.install")}</button>
               </div>
               <div class="body"><strong>{s.name}</strong></div>
-              <div class="faint small">{s.dir || "/"} · {s.files} arquivos</div>
+              <div class="faint small">{s.dir || "/"} · {t("mem.files", { n: s.files })}</div>
             </div>
           {:else}
             <div class="empty">{hubBusy ? t("common.loading") : t("mem.skillsNone")}</div>

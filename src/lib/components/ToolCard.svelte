@@ -118,7 +118,7 @@
       {/if}
 
       {#if part.images?.length}
-        <div class="label">imagens ({part.images.length})</div>
+        <div class="label">{t("tool.images", { n: part.images.length })}</div>
         <div class="thumbs">
           {#each part.images as img, i}
             <img

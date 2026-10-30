@@ -1,4 +1,5 @@
 import { api } from "./api";
+import { t } from "./i18n.svelte";
 
 /** True when a markdown `img src` points to a local file rather than a URL. */
 export function isLocalImageSrc(src: string): boolean {
@@ -35,7 +36,7 @@ export async function hydrateImages(root: HTMLElement | null, cwd: string) {
         img.src = att.previewUrl;
         img.title = path;
       } else {
-        img.replaceWith(brokenBadge(path, "não é uma imagem"));
+        img.replaceWith(brokenBadge(path, t("media.notAnImage")));
       }
     } catch (e: any) {
       img.replaceWith(brokenBadge(path, String(e?.message ?? e).slice(0, 80)));

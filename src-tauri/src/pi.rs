@@ -275,7 +275,7 @@ pub fn send(state: &PiState, tab: &str, command: serde_json::Value) -> Result<()
     let guard = state.procs.lock().unwrap();
     let running = guard
         .get(tab)
-        .ok_or_else(|| "pi não está rodando".to_string())?;
+        .ok_or_else(|| "pi is not running".to_string())?;
     let line = serde_json::to_string(&command).map_err(|e| e.to_string())?;
     let mut stdin = running.stdin.lock().unwrap();
     stdin

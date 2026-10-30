@@ -156,7 +156,7 @@ pub fn write_diagnostics(payload: &str) -> Result<String, String> {
         .map(|d| d.as_secs())
         .unwrap_or(0);
     let path = base.join(format!("diag-{ts}.json"));
-    fs::write(&path, payload).map_err(|e| format!("falha ao gravar diagnóstico: {e}"))?;
+    fs::write(&path, payload).map_err(|e| format!("failed to write diagnostics: {e}"))?;
     Ok(path.to_string_lossy().into_owned())
 }
 
@@ -168,7 +168,7 @@ pub fn open_external(url: &str) -> Result<(), String> {
         || url.starts_with("mailto:")
         || url.starts_with("ftp://");
     if !allowed {
-        return Err("só abro http(s), mailto e ftp".into());
+        return Err("only http(s), mailto and ftp are opened".into());
     }
     let candidates: [(&str, Vec<&str>); 3] = [
         ("xdg-open", vec![url]),
@@ -186,5 +186,5 @@ pub fn open_external(url: &str) -> Result<(), String> {
             return Ok(());
         }
     }
-    Err("nenhum abridor disponível (xdg-open/gio)".into())
+    Err("no opener available (xdg-open/gio)".into())
 }

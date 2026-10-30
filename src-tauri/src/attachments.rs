@@ -78,14 +78,14 @@ pub struct Attachment {
 }
 
 fn build(path: &Path) -> Result<Attachment, String> {
-    let meta = fs::metadata(path).map_err(|e| format!("não consegui ler {}: {e}", path.display()))?;
+    let meta = fs::metadata(path).map_err(|e| format!("could not read {}: {e}", path.display()))?;
     if meta.is_dir() {
-        return Err("pastas não são suportadas como anexo".into());
+        return Err("folders are not supported as attachments".into());
     }
     let name = path
         .file_name()
         .map(|n| n.to_string_lossy().into_owned())
-        .unwrap_or_else(|| "arquivo".into());
+        .unwrap_or_else(|| "file".into());
     let mime = mime_for(&name);
     let size = meta.len();
 
@@ -153,16 +153,16 @@ pub fn stage(path: &Path) -> Result<String, String> {
     let name = path
         .file_name()
         .map(|n| n.to_string_lossy().into_owned())
-        .unwrap_or_else(|| "arquivo".into());
+        .unwrap_or_else(|| "file".into());
     let dest = dir.join(name);
-    fs::copy(path, &dest).map_err(|e| format!("falha ao copiar anexo: {e}"))?;
+    fs::copy(path, &dest).map_err(|e| format!("failed to copy attachment: {e}"))?;
     Ok(dest.to_string_lossy().into_owned())
 }
 
 pub fn save_b64(name: String, mime: String, data: String) -> Result<Attachment, String> {
     let bytes = base64::engine::general_purpose::STANDARD
         .decode(data.as_bytes())
-        .map_err(|e| format!("base64 inválido: {e}"))?;
+        .map_err(|e| format!("invalid base64: {e}"))?;
     let dir = cache_root().join(format!("{}", stamp()));
     fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
     let ext = mime.rsplit('/').next().unwrap_or("png").split('+').next().unwrap_or("png");

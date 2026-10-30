@@ -215,7 +215,7 @@ pub fn write_target(target: &str, entries: Vec<String>) -> Result<MemoryFile, St
 fn open_db() -> Result<Connection, String> {
     let path = db_path();
     if !path.exists() {
-        return Err(format!("banco não encontrado em {}", path.display()));
+        return Err(format!("database not found at {}", path.display()));
     }
     Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
         .map_err(|e| format!("falha ao abrir banco: {e}"))
@@ -532,12 +532,12 @@ fn slugify(name: &str) -> String {
 pub fn create_skill(name: &str, content: &str) -> Result<String, String> {
     let slug = slugify(name);
     if slug.is_empty() {
-        return Err("nome inválido".into());
+        return Err("invalid name".into());
     }
     let dir = skill_root_for_create().join(&slug);
     fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
     let path = dir.join("SKILL.md");
-    fs::write(&path, content).map_err(|e| format!("falha ao escrever skill: {e}"))?;
+    fs::write(&path, content).map_err(|e| format!("failed to write skill: {e}"))?;
     Ok(path.to_string_lossy().into_owned())
 }
 
@@ -545,12 +545,12 @@ pub fn write_skill(path: &str, content: &str) -> Result<(), String> {
     let p = PathBuf::from(path);
     let skills_root = memory_dir().join("skills");
     if !p.starts_with(&skills_root) && !p.starts_with(agent_root().join("projects-memory")) {
-        return Err("só é permitido editar skills dentro do diretório de memória".into());
+        return Err("only skills inside the memory directory can be edited".into());
     }
     if p.file_name().and_then(|n| n.to_str()) != Some("SKILL.md") {
-        return Err("o arquivo precisa se chamar SKILL.md".into());
+        return Err("the file must be named SKILL.md".into());
     }
-    fs::write(&p, content).map_err(|e| format!("falha ao salvar skill: {e}"))
+    fs::write(&p, content).map_err(|e| format!("failed to save skill: {e}"))
 }
 
 // ── session management ───────────────────────────────────────────────────────
@@ -590,10 +590,10 @@ fn iso_now() -> String {
 fn assert_session_path(path: &Path) -> Result<(), String> {
     let root = sessions_root();
     if !path.starts_with(&root) {
-        return Err("sessão fora do diretório permitido".into());
+        return Err("session outside the allowed directory".into());
     }
     if path.extension().and_then(|e| e.to_str()) != Some("jsonl") {
-        return Err("arquivo inválido".into());
+        return Err("invalid file".into());
     }
     Ok(())
 }
@@ -602,10 +602,10 @@ fn assert_session_path(path: &Path) -> Result<(), String> {
 pub fn rename_session(path: &str, name: &str) -> Result<(), String> {
     let p = PathBuf::from(path);
     assert_session_path(&p)?;
-    let content = fs::read_to_string(&p).map_err(|e| format!("falha ao ler sessão: {e}"))?;
+    let content = fs::read_to_string(&p).map_err(|e| format!("failed to read session: {e}"))?;
     let clean = name.trim();
     if clean.is_empty() {
-        return Err("nome vazio".into());
+        return Err("empty name".into());
     }
     let leaf = content
         .lines()
@@ -634,7 +634,7 @@ pub fn rename_session(path: &str, name: &str) -> Result<(), String> {
         line = format!("\n{line}");
     }
     file.write_all(format!("{line}\n").as_bytes())
-        .map_err(|e| format!("falha ao renomear: {e}"))?;
+        .map_err(|e| format!("failed to rename: {e}"))?;
     Ok(())
 }
 
@@ -643,7 +643,7 @@ pub fn delete_session(path: &str) -> Result<String, String> {
     let p = PathBuf::from(path);
     assert_session_path(&p)?;
     if !p.is_file() {
-        return Err("sessão não encontrada".into());
+        return Err("session not found".into());
     }
     let home = std::env::var("HOME").unwrap_or_default();
     let trash = PathBuf::from(home)
@@ -656,9 +656,9 @@ pub fn delete_session(path: &str) -> Result<String, String> {
     let name = p
         .file_name()
         .map(|n| n.to_string_lossy().into_owned())
-        .unwrap_or_else(|| "sessao.jsonl".into());
+        .unwrap_or_else(|| "session.jsonl".into());
     let dest = trash.join(format!("{ts}-{name}"));
-    fs::rename(&p, &dest).map_err(|e| format!("falha ao mover sessão: {e}"))?;
+    fs::rename(&p, &dest).map_err(|e| format!("failed to move session: {e}"))?;
     Ok(dest.to_string_lossy().into_owned())
 }
 
@@ -762,7 +762,7 @@ mod holder_tests {
             .stdout(Stdio::null())
             .stderr(Stdio::null())
             .spawn()
-            .expect("tail disponível");
+            .expect("tail available");
         std::thread::sleep(Duration::from_millis(400));
 
         let holders = session_holders(path.to_str().unwrap(), &[]);
@@ -770,7 +770,7 @@ mod holder_tests {
         let _ = child.kill();
         let _ = child.wait();
         let _ = fs::remove_file(&path);
-        assert!(found, "esperava encontrar o pid {} em {:?}", child.id(), holders);
+        assert!(found, "expected to find pid {} in {:?}", child.id(), holders);
     }
 
     #[test]
@@ -791,7 +791,7 @@ mod holder_tests {
         let _ = child.kill();
         let _ = child.wait();
         let _ = fs::remove_file(&path);
-        assert!(!found, "não deveria listar os próprios sidecars");
+        assert!(!found, "should not list its own sidecars");
     }
 
     #[test]

@@ -47,7 +47,7 @@ async function ensurePage() {
   }
   const context = await browser.newContext({
     viewport: { width: 1280, height: 800 },
-    locale: "pt-BR",
+    locale: "en-US",
   });
   page = await context.newPage();
   return page;
@@ -91,7 +91,7 @@ async function publish(extra = {}) {
 const tools = [
   {
     name: "browser_navigate",
-    description: "Abre uma URL no navegador embutido e espera o carregamento.",
+    description: "Opens a URL in the embedded browser and waits for it to load.",
     inputSchema: {
       type: "object",
       properties: { url: { type: "string" }, waitMs: { type: "number" } },
@@ -101,12 +101,12 @@ const tools = [
   {
     name: "browser_snapshot",
     description:
-      "Lê a página atual: título, URL, texto visível, links e campos de formulário. Use antes de clicar.",
+      "Reads the current page: title, URL, visible text, links and form fields. Use before clicking.",
     inputSchema: { type: "object", properties: {} },
   },
   {
     name: "browser_screenshot",
-    description: "Tira um screenshot da página (o usuário também vê no app).",
+    description: "Takes a screenshot of the page (the user also sees it in the app).",
     inputSchema: {
       type: "object",
       properties: { fullPage: { type: "boolean" } },
@@ -115,7 +115,7 @@ const tools = [
   {
     name: "browser_click",
     description:
-      "Clica por seletor CSS, por texto visível, ou no centro de um elemento encontrado pelo snapshot.",
+      "Clicks by CSS selector, by visible text, or at the centre of an element found by the snapshot.",
     inputSchema: {
       type: "object",
       properties: {
@@ -127,7 +127,7 @@ const tools = [
   },
   {
     name: "browser_type",
-    description: "Preenche um campo (seletor ou rótulo/placeholder) e opcionalmente envia com Enter.",
+    description: "Fills a field (selector or label/placeholder) and optionally submits with Enter.",
     inputSchema: {
       type: "object",
       properties: {
@@ -141,7 +141,7 @@ const tools = [
   },
   {
     name: "browser_press",
-    description: "Pressiona uma tecla (Enter, Escape, PageDown, Tab...).",
+    description: "Presses a key (Enter, Escape, PageDown, Tab...).",
     inputSchema: {
       type: "object",
       properties: { key: { type: "string" } },
@@ -150,7 +150,7 @@ const tools = [
   },
   {
     name: "browser_scroll",
-    description: "Rola a página em pixels (positivo = para baixo).",
+    description: "Scrolls the page in pixels (positive = down).",
     inputSchema: {
       type: "object",
       properties: { dy: { type: "number" } },
@@ -159,7 +159,7 @@ const tools = [
   },
   {
     name: "browser_eval",
-    description: "Executa JavaScript na página e retorna o resultado (JSON).",
+    description: "Runs JavaScript on the page and returns the result (JSON).",
     inputSchema: {
       type: "object",
       properties: { js: { type: "string" } },
@@ -168,7 +168,7 @@ const tools = [
   },
   {
     name: "browser_wait",
-    description: "Espera um tempo (ms) ou um seletor aparecer.",
+    description: "Waits for some time (ms) or for a selector to appear.",
     inputSchema: {
       type: "object",
       properties: { ms: { type: "number" }, selector: { type: "string" } },
@@ -176,12 +176,12 @@ const tools = [
   },
   {
     name: "browser_back",
-    description: "Volta uma página no histórico.",
+    description: "Goes back one page in the history.",
     inputSchema: { type: "object", properties: {} },
   },
   {
     name: "browser_close",
-    description: "Fecha o navegador e libera a memória.",
+    description: "Closes the browser and frees the memory.",
     inputSchema: { type: "object", properties: {} },
   },
 ];
@@ -195,18 +195,18 @@ async function handleTool(name, args) {
       await p.goto(url, { waitUntil: "domcontentloaded", timeout: 45000 });
       if (args.waitMs) await p.waitForTimeout(Number(args.waitMs));
       await publish();
-      return `navegou para ${p.url()}\ntítulo: ${await p.title()}`;
+      return `navigated to ${p.url()}\ntitle: ${await p.title()}`;
     }
     case "browser_snapshot": {
       await publish();
       const info = JSON.parse(fs.readFileSync(STATE, "utf8"));
       const links = info.links
-        .map((l, i) => `  [${i}] ${l.text || "(sem texto)"} → ${l.href}`)
+        .map((l, i) => `  [${i}] ${l.text || "(no text)"} → ${l.href}`)
         .join("\n");
       const forms = info.forms
         .map((f) => `  <${f.tag}${f.type ? ` type="${f.type}"` : ""}${f.id ? ` id="${f.id}"` : ""}${f.name ? ` name="${f.name}"` : ""}${f.placeholder ? ` placeholder="${f.placeholder}"` : ""}>`)
         .join("\n");
-      return `URL: ${info.url}\nTÍTULO: ${info.title}\n\nTEXTO:\n${info.text}\n\nLINKS:\n${links || "  (nenhum)"}\n\nCAMPOS:\n${forms || "  (nenhum)"}`;
+      return `URL: ${info.url}\nTITLE: ${info.title}\n\nTEXT:\n${info.text}\n\nLINKS:\n${links || "  (none)"}\n\nFIELDS:\n${forms || "  (none)"}`;
     }
     case "browser_screenshot": {
       const buf = await p.screenshot({
@@ -219,7 +219,7 @@ async function handleTool(name, args) {
       return {
         content: [
           { type: "image", data: buf.toString("base64"), mimeType: "image/jpeg" },
-          { type: "text", text: `screenshot de ${p.url()}` },
+          { type: "text", text: `screenshot of ${p.url()}` },
         ],
       };
     }
@@ -227,36 +227,36 @@ async function handleTool(name, args) {
       let target = null;
       if (args.selector) target = p.locator(String(args.selector)).nth(args.index ?? 0);
       else if (args.text) target = p.getByText(String(args.text), { exact: false }).nth(args.index ?? 0);
-      else throw new Error("informe selector ou text");
+      else throw new Error("provide selector or text");
       await target.waitFor({ state: "visible", timeout: 15000 });
       await target.click({ timeout: 15000 });
       await p.waitForLoadState("domcontentloaded").catch(() => {});
       await publish();
-      return `clicou em ${args.text ?? args.selector} → ${p.url()}`;
+      return `clicked ${args.text ?? args.selector} → ${p.url()}`;
     }
     case "browser_type": {
       const sel =
         args.selector ||
         (args.text ? `:is(input[placeholder*="${args.text}" i], input[name*="${args.text}" i], textarea[placeholder*="${args.text}" i])` : "");
-      if (!sel) throw new Error("informe selector (ou text como rótulo)");
+      if (!sel) throw new Error("provide selector (or text as a label)");
       const field = p.locator(sel).first();
       await field.waitFor({ state: "visible", timeout: 15000 });
       await field.fill(String(args.value ?? ""));
       if (args.submit) await field.press("Enter");
       await publish();
-      return `preencheu ${sel}${args.submit ? " e enviou" : ""}`;
+      return `filled ${sel}${args.submit ? " and submitted" : ""}`;
     }
     case "browser_press": {
       await p.keyboard.press(String(args.key ?? "Enter"));
       await p.waitForLoadState("domcontentloaded").catch(() => {});
       await publish();
-      return `tecla ${args.key}`;
+      return `pressed ${args.key}`;
     }
     case "browser_scroll": {
       await p.mouse.wheel(0, Number(args.dy ?? 600));
       await p.waitForTimeout(300);
       await publish();
-      return `rolou ${args.dy}px`;
+      return `scrolled ${args.dy}px`;
     }
     case "browser_eval": {
       const result = await p.evaluate(String(args.js ?? "null"));
@@ -272,16 +272,16 @@ async function handleTool(name, args) {
     case "browser_back": {
       await p.goBack({ waitUntil: "domcontentloaded", timeout: 30000 }).catch(() => {});
       await publish();
-      return `voltou para ${p.url()}`;
+      return `went back to ${p.url()}`;
     }
     case "browser_close": {
       if (browser) await browser.close().catch(() => {});
       browser = null;
       page = null;
-      return "navegador fechado";
+      return "browser closed";
     }
     default:
-      throw new Error(`ferramenta desconhecida: ${name}`);
+      throw new Error(`unknown tool: ${name}`);
   }
 }
 
@@ -331,7 +331,7 @@ process.stdin.on("data", async (chunk) => {
       } else if (msg.method === "prompts/list") {
         reply({ prompts: [] });
       } else {
-        fail(`método não suportado: ${msg.method}`);
+        fail(`unsupported method: ${msg.method}`);
       }
     } catch (err) {
       launchError = String(err);

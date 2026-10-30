@@ -199,7 +199,7 @@ pub fn browser_enabled() -> bool {
 }
 
 pub fn browser_enable() -> Result<String, String> {
-    let script = browser_script().ok_or_else(|| "scripts/browser-mcp.mjs não encontrado".to_string())?;
+    let script = browser_script().ok_or_else(|| "scripts/browser-mcp.mjs not found".to_string())?;
     let mut config = read_config();
     if config.get("mcpServers").is_none() {
         config["mcpServers"] = serde_json::json!({});

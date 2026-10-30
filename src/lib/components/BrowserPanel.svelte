@@ -43,10 +43,7 @@
       {:else}
         <div class="empty">
           <p>{@html t("browser.off")}</p>
-          <p class="faint">
-            Ao ativar, um servidor MCP local (<code>hina-browser</code>) é registrado e o agente ganha
-            ferramentas para navegar, clicar, digitar e tirar screenshots — que aparecem aqui.
-          </p>
+          <p class="faint">{@html t("browser.offHint")}</p>
           <button class="primary" onclick={enable} disabled={busy}>
             {busy ? t("browser.enabling") : t("browser.enable")}
           </button>

@@ -59,6 +59,7 @@ const en = {
   "tabs.renameHint": "double-click to rename",
   "tabs.renameTitle": "Tab name",
   "tabs.renamePlaceholder": "tab name",
+  "tabs.defaultLabel": "new",
 
   // composer
   "composer.placeholder": "Ask something, drop files or paste an image…",
@@ -80,6 +81,8 @@ const en = {
   "tool.result": "result",
   "tool.all": "all",
   "tool.collapse": "collapse",
+  "tool.images": "images ({n})",
+  "media.notAnImage": "not an image",
   "tree.current": "current",
   "tree.empty": "empty session",
   "tree.title": "Session tree",
@@ -87,6 +90,7 @@ const en = {
   "tree.forkHint": "creates a fork from that point",
   "tree.noMessages": "no user messages yet",
   "tree.leaf": "leaf",
+  "tree.model": "model: {name}",
 
   // top bar / settings
   "top.settings": "settings",
@@ -239,6 +243,17 @@ const en = {
   "mem.askAgentConfig": "ask the agent to configure",
   "mem.askAgentInstall": "ask the agent to install/adapt",
   "mem.memDir": "memory folder",
+  "mem.skillSaved": "skill saved",
+  "mem.files": "{n} files",
+  "mem.skillTemplate":
+    "---\nname: {name}\ndescription: describe when to use this skill (the trigger the user types)\n---\n\n## When to Use\n\n- \n\n## Procedure\n\n1. \n\n## Pitfalls\n\n- \n\n## Verification\n\n- \n",
+  "mem.consolidatePrompt":
+    "Review the persistent memory in ~/.pi/agent/pi-hermes-memory/ (MEMORY.md, USER.md, failures.md) and consolidate redundant or obsolete entries using the memory_* / edit tools, respecting the character limits. Do not delete information about user preferences. When done, run /memory-sync-markdown.",
+  "mem.mcpConfigPrompt":
+    "Configure the MCP server \"{name}\" in ~/.pi/agent/mcp.json.\nOfficial registry data: {target}{desc}\nFollow the same structure as the other servers and validate with `pi mcp list`.",
+  "mem.mcpDescLine": "\nDescription: {description}",
+  "mem.skillInstallPrompt":
+    "Install the skill \"{name}\" from {repo} (directory {dir}) into ~/.pi/agent/pi-hermes-memory/skills/ and adjust its SKILL.md if needed.",
 
   // dialogs
   "dialog.confirmation": "Confirmation",
@@ -377,6 +392,7 @@ const ptBR: Record<keyof typeof en, string> = {
   "tabs.renameHint": "duplo clique para renomear",
   "tabs.renameTitle": "Nome da aba",
   "tabs.renamePlaceholder": "nome da aba",
+  "tabs.defaultLabel": "nova",
 
   "composer.placeholder": "Pergunte algo, arraste arquivos ou cole uma imagem…",
   "composer.attach": "Anexar arquivos",
@@ -396,6 +412,8 @@ const ptBR: Record<keyof typeof en, string> = {
   "tool.result": "resultado",
   "tool.all": "tudo",
   "tool.collapse": "recolher",
+  "tool.images": "imagens ({n})",
+  "media.notAnImage": "não é uma imagem",
   "tree.current": "atual",
   "tree.empty": "sessão vazia",
   "tree.title": "Árvore da sessão",
@@ -403,6 +421,7 @@ const ptBR: Record<keyof typeof en, string> = {
   "tree.forkHint": "cria um fork a partir daquele ponto",
   "tree.noMessages": "nenhuma mensagem de usuário ainda",
   "tree.leaf": "leaf",
+  "tree.model": "modelo: {name}",
 
   "top.settings": "Ajustes",
   "top.export": "Exportar HTML",
@@ -551,6 +570,17 @@ const ptBR: Record<keyof typeof en, string> = {
   "mem.askAgentConfig": "pedir ao agente para configurar",
   "mem.askAgentInstall": "pedir ao agente para instalar/adaptar",
   "mem.memDir": "pasta de memória",
+  "mem.skillSaved": "skill salva",
+  "mem.files": "{n} arquivos",
+  "mem.skillTemplate":
+    "---\nname: {name}\ndescription: descreva quando usar esta skill (o gatilho que o usuário digita)\n---\n\n## When to Use\n\n- \n\n## Procedure\n\n1. \n\n## Pitfalls\n\n- \n\n## Verification\n\n- \n",
+  "mem.consolidatePrompt":
+    "Revise a memória persistente em ~/.pi/agent/pi-hermes-memory/ (MEMORY.md, USER.md, failures.md) e consolide entradas redundantes ou obsoletas usando as ferramentas memory_* / edit, respeitando os limites de caracteres. Não apague informação sobre preferências do usuário. Ao final, rode /memory-sync-markdown.",
+  "mem.mcpConfigPrompt":
+    "Configure o servidor MCP \"{name}\" em ~/.pi/agent/mcp.json.\nDados do registro oficial: {target}{desc}\nUse a mesma estrutura dos outros servidores e valide com `pi mcp list`.",
+  "mem.mcpDescLine": "\nDescrição: {description}",
+  "mem.skillInstallPrompt":
+    "Instale a skill \"{name}\" de {repo} (diretório {dir}) em ~/.pi/agent/pi-hermes-memory/skills/ e ajuste o SKILL.md se necessário.",
 
   "dialog.confirmation": "Confirmação",
   "dialog.cancelled": "cancelado",

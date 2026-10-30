@@ -136,7 +136,7 @@ function extractText(result: any): string {
 /** One independent pi process + conversation. */
 export class Tab {
   id = $state("");
-  label = $state("nova");
+  label = $state("new");
   cwd = $state("/home/dante");
   conn = $state<"idle" | "starting" | "ready" | "dead">("idle");
   streaming = $state(false);
@@ -197,8 +197,8 @@ export class Tab {
 
   get title(): string {
     if (this.sessionName) return this.sessionName;
-    if (this.label && this.label !== "nova") return this.label;
-    return this.sessionId?.slice(0, 8) ?? "nova";
+    if (this.label && this.label !== "nova" && this.label !== "new") return this.label;
+    return this.sessionId?.slice(0, 8) ?? t("tabs.defaultLabel");
   }
 
   get current(): Msg | null {
@@ -768,7 +768,7 @@ class AppState {
         chips,
       }),
     );
-    if (tab.label === "nova" || !tab.label) {
+    if (tab.label === "nova" || tab.label === "new" || !tab.label) {
       tab.label = userText.replace(/\s+/g, " ").slice(0, 28);
     }
 
@@ -879,7 +879,7 @@ class AppState {
     tab.currentKey = null;
     tab.streaming = false;
     tab.working = false;
-    tab.label = "nova";
+    tab.label = "new";
     tab.sessionName = null;
     await this.refreshState(tab);
     await this.refreshStats(tab);
