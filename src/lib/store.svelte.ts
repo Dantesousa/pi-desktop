@@ -272,6 +272,7 @@ class AppState {
   focusToken = $state(0);
   bin = $state("pi");
   appVersion = $state("0.1.1");
+  build = $state<{ channel: string; version: string; commit: string; tag: string } | null>(null);
   gateMode = $state(localStorage.getItem("pi.gate") || "dangerous");
   costLimit = $state(Number(localStorage.getItem("pi.costLimit") || "0"));
   theme = $state(localStorage.getItem("pi.theme") || "midnight");
@@ -400,6 +401,14 @@ class AppState {
     if (panel === "tree") this.showTree = true;
     if (panel === "memory") this.showMemory = true;
     if (panel === "browser") this.toggleBrowser(true);
+    try {
+      this.build = await api.buildInfo();
+      if (this.build?.channel === "dev") {
+        document.title = `DEV · Hina ${this.build.commit ? `(${this.build.commit})` : ""}`;
+      }
+    } catch {
+      /* ignore */
+    }
     this.bin = await api.resolveBin();
     try {
       await api.stopAll();

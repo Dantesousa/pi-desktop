@@ -156,6 +156,13 @@
   {/if}
 </div>
 
+{#if app.build?.channel === "dev"}
+  <div class="devmark" title={`dev build ${app.build.commit} — not a release`}>
+    <span>DEV</span>
+    <small>{app.build.commit}</small>
+  </div>
+{/if}
+
 <CommandPalette />
 <PromptDialog />
 <Dialog />
@@ -252,6 +259,30 @@
     background: var(--panel-2);
     border: 1px solid var(--border);
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  }
+  .devmark {
+    position: fixed;
+    left: 10px;
+    bottom: 10px;
+    z-index: 95;
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    padding: 3px 9px;
+    border-radius: 999px;
+    background: rgba(245, 158, 11, 0.16);
+    border: 1px solid rgba(245, 158, 11, 0.55);
+    color: #fbbf24;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    pointer-events: none;
+    text-transform: uppercase;
+  }
+  .devmark small {
+    color: rgba(251, 191, 36, 0.65);
+    font-size: 9px;
+    letter-spacing: 0;
   }
   .toasts {
     position: fixed;

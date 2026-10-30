@@ -4,7 +4,7 @@
   "description": "Native desktop client for the Pi coding agent",
   "type": "module",
   "scripts": {
-    "dev": "vite dev",
+    "dev": "tauri dev -- --config src-tauri/tauri.dev.conf.json",
     "build": "vite build",
     "preview": "vite preview",
     "prepare": "svelte-kit sync || echo ''",
@@ -12,7 +12,8 @@
     "tauri": "tauri",
     "dev:clean": "bash scripts/dev.sh",
     "test": "vitest run",
-    "dist": "tauri build"
+    "dist": "node scripts/release-guard.mjs && tauri build",
+    "dist:unsafe": "tauri build"
   },
   "license": "MIT",
   "dependencies": {

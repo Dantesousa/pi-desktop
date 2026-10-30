@@ -17,4 +17,4 @@ fi
 
 pkill -f "target/debug/pi-desktop" 2>/dev/null || true
 sleep 0.3
-exec npm run tauri dev
+exec npm run tauri dev -- --config src-tauri/tauri.dev.conf.json

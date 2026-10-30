@@ -28,6 +28,7 @@ export const api = {
   stopAll: () => invoke<void>("pi_stop_all"),
   status: (tab: string) => invoke<any>("pi_status", { tab }),
   resolveBin: () => invoke<string>("pi_resolve_bin"),
+  buildInfo: async () => camel(await invoke<any>("build_info")),
   openExternal: (url: string) => invoke<void>("open_external", { url }),
   permissionExtension: () => invoke<string | null>("pi_permission_extension"),
   writeDiagnostics: (payload: string) => invoke<string>("write_diagnostics", { payload }),

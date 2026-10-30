@@ -299,6 +299,14 @@
         </select>
       </label>
 
+      <div class="buildrow">
+        <span class="faint">
+          {app.build?.channel ?? "—"}
+          {#if app.build?.commit}· {app.build.commit}{/if}
+          {#if app.build?.tag}· {app.build.tag}{/if}
+        </span>
+      </div>
+
       <div class="piver">
         <span class="faint">pi {piVersion?.current ?? "—"}{piVersion?.latest ? ` · latest ${piVersion.latest}` : ""}</span>
         <button class="mini" onclick={checkPi} disabled={updating}>{t("top.check")}</button>
@@ -589,6 +597,11 @@
     height: 26px;
     padding: 2px;
     background: var(--bg-2);
+  }
+  .buildrow {
+    display: flex;
+    font-family: var(--mono);
+    font-size: 10px;
   }
   .piver {
     display: flex;

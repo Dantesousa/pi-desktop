@@ -98,6 +98,27 @@ Hina drives `pi --mode rpc` directly. Everything the protocol offers has a home 
 
 On Arch: `sudo pacman -S webkit2gtk-4.1 gtk3 libayatana-appindicator librsvg`
 
+## Dev vs release builds
+
+The dev build is deliberately a *different app* so it can never be confused with a release:
+
+| | dev | release |
+|---|---|---|
+| product / id | `Hina Dev` / `com.dante.hina.dev` | `Hina` / `com.dante.hina` |
+| icon | amber/red with warning stripes | blue/purple |
+| window title | `Hina · DEV` | `Hina · pi desktop` |
+| UI | `DEV` badge with the commit hash, `<title>` prefixed | none |
+| single instance | separate lock, so both can coexist | — |
+
+`npm run dev` uses `src-tauri/tauri.dev.conf.json` for that identity. The channel is
+compiled in by `build.rs` (`PI_CHANNEL`, defaulting to the cargo profile) and shown
+in the settings popover.
+
+Releases are guarded by `scripts/release-guard.mjs`: `npm run dist` refuses a dirty
+tree, an untagged HEAD, a tag that does not match `package.json`, or `PI_CHANNEL=dev`.
+CI runs the same guard (with `fetch-depth: 0` so tags are present) and sets
+`PI_CHANNEL=release`. `npm run dist:unsafe` bypasses it locally only.
+
 ## Development
 
 ```bash
@@ -137,6 +158,27 @@ Ubuntu 24.04 and attach them to a GitHub release:
 ```bash
 git tag v0.1.2 && git push origin v0.1.2
 ```
+
+## Dev vs release builds
+
+The dev build is deliberately a *different app* so it can never be confused with a release:
+
+| | dev | release |
+|---|---|---|
+| product / id | `Hina Dev` / `com.dante.hina.dev` | `Hina` / `com.dante.hina` |
+| icon | amber/red with warning stripes | blue/purple |
+| window title | `Hina · DEV` | `Hina · pi desktop` |
+| UI | `DEV` badge with the commit hash, `<title>` prefixed | none |
+| single instance | separate lock, so both can coexist | — |
+
+`npm run dev` uses `src-tauri/tauri.dev.conf.json` for that identity. The channel is
+compiled in by `build.rs` (`PI_CHANNEL`, defaulting to the cargo profile) and shown
+in the settings popover.
+
+Releases are guarded by `scripts/release-guard.mjs`: `npm run dist` refuses a dirty
+tree, an untagged HEAD, a tag that does not match `package.json`, or `PI_CHANNEL=dev`.
+CI runs the same guard (with `fetch-depth: 0` so tags are present) and sets
+`PI_CHANNEL=release`. `npm run dist:unsafe` bypasses it locally only.
 
 ## Development notes
 

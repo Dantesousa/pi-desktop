@@ -19,6 +19,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Install Linux dependencies
         run: |
@@ -42,10 +44,16 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci
 
+      - name: Release guard (clean tree, tag matches version)
+        env:
+          PI_CHANNEL: release
+        run: node scripts/release-guard.mjs
+
       - name: Build and attach to release
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PI_CHANNEL: release
         with:
           tagName: ${{ github.event.inputs.tag || github.ref_name }}
           releaseName: "Hina ${{ github.event.inputs.tag || github.ref_name }}"
@@ -74,6 +82,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Install Linux dependencies
         run: |

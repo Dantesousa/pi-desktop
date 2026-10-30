@@ -58,6 +58,28 @@ fn pi_self_update() -> Result<String, String> {
     pi::self_update()
 }
 
+#[derive(serde::Serialize)]
+pub struct BuildInfo {
+    pub channel: String,
+    pub version: String,
+    pub commit: String,
+    pub tag: String,
+}
+
+fn channel() -> &'static str {
+    option_env!("PI_CHANNEL").unwrap_or("dev")
+}
+
+#[tauri::command]
+fn build_info() -> BuildInfo {
+    BuildInfo {
+        channel: channel().to_string(),
+        version: env!("CARGO_PKG_VERSION").to_string(),
+        commit: option_env!("PI_COMMIT").unwrap_or("").to_string(),
+        tag: option_env!("PI_TAG").unwrap_or("").to_string(),
+    }
+}
+
 #[tauri::command]
 fn open_external(url: String) -> Result<(), String> {
     files::open_external(&url)
@@ -341,6 +363,7 @@ pub fn run() {
             pi_version,
             pi_self_update,
             open_external,
+            build_info,
             file_snapshot,
             file_restore,
             pi_stop_all,
@@ -381,9 +404,15 @@ pub fn run() {
             use tauri_plugin_global_shortcut::GlobalShortcutExt;
 
             // window icon (fallback for X11; Wayland uses the .desktop file)
+            let dev = channel() == "dev";
+            let icon_bytes: &[u8] = if dev {
+                include_bytes!("../icons/dev/128x128@2x.png")
+            } else {
+                include_bytes!("../icons/128x128@2x.png")
+            };
             if let Some(window) = app.get_webview_window("main") {
-                let _ = window.set_title("Hina · pi desktop");
-                if let Ok(icon) = tauri::image::Image::from_bytes(include_bytes!("../icons/128x128@2x.png")) {
+                let _ = window.set_title(if dev { "Hina · DEV" } else { "Hina · pi desktop" });
+                if let Ok(icon) = tauri::image::Image::from_bytes(icon_bytes) {
                     let _ = window.set_icon(icon);
                 }
             }
@@ -394,8 +423,7 @@ pub fn run() {
             let quit = MenuItem::with_id(app, "quit", "Sair", true, None::<&str>)?;
             let menu = Menu::with_items(app, &[&show, &new_chat, &quit])?;
 
-            let tray_image = tauri::image::Image::from_bytes(include_bytes!("../icons/128x128@2x.png"))
-                .ok()
+            let tray_image = tauri::image::Image::from_bytes(icon_bytes).ok()
                 .or_else(|| app.default_window_icon().cloned());
             let _ = TrayIconBuilder::with_id("main-tray")
                 .icon(tray_image.unwrap())
