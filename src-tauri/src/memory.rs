@@ -387,7 +387,7 @@ fn read_session_meta(path: &Path) -> Option<SessionInfo> {
     let mut name: Option<String> = None;
     let mut messages = 0usize;
     for line in content.lines() {
-        if line.contains("\"role\"") {
+        if line.contains("\"role\":\"user\"") {
             messages += 1;
         }
         if name.is_none() && line.contains("session_info") {

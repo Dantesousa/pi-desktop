@@ -345,6 +345,8 @@ const en = {
   "toast.permAnswerFailed": "answer failed: {error}",
   "toast.extension": "extension: {error}",
   "toast.openedInNewTab": "opened in a new tab so the running turn keeps going",
+  "toast.alreadyOpen": "that session is already open in another tab",
+  "toast.resumed": "resumed the most recent session",
 };
 
 const ptBR: Record<keyof typeof en, string> = {
@@ -668,6 +670,8 @@ const ptBR: Record<keyof typeof en, string> = {
   "toast.permAnswerFailed": "resposta falhou: {error}",
   "toast.extension": "extensão: {error}",
   "toast.openedInNewTab": "aberto numa aba nova para não interromper o turno em andamento",
+  "toast.alreadyOpen": "essa sessão já está aberta em outra aba",
+  "toast.resumed": "retomei a sessão mais recente",
 };
 
 export const messages: Record<LocaleId, Record<string, string>> = {

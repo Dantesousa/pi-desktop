@@ -16,6 +16,7 @@
         )
       : app.sessions;
     return [...list]
+      .filter((x) => x.messages > 0)
       .sort((a, b) => {
         const pa = app.isPinned(a.path) ? 1 : 0;
         const pb = app.isPinned(b.path) ? 1 : 0;

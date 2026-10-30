@@ -461,8 +461,28 @@ class AppState {
       }),
     );
 
-    if (!this.tabs.length) this.newTab();
-    await this.connect();
+    if (!this.tabs.length) {
+      const tab = this.newTab();
+      // resume the most recent session for this workspace instead of silently
+      // starting a blank one (that looked like "it created another chat")
+      let resume: { path: string; messages: number } | null = null;
+      try {
+        const all = await api.sessionsList(30);
+        const sameWorkspace = all.filter((x) => x.cwd === tab.cwd && x.messages > 0);
+        resume = sameWorkspace[0] ?? (all.find((x) => x.messages > 0) ?? null);
+      } catch {
+        resume = null;
+      }
+      await this.connect({ tab, session: resume?.path });
+      if (resume?.path) {
+        const history = await this.send(tab.id, { type: "get_messages" });
+        this.hydrate(tab, history?.messages ?? []);
+        await this.refreshStats(tab);
+        await this.syncSessionMeta(tab);
+      }
+    } else {
+      await this.connect();
+    }
     document.addEventListener("hina:open-link", (e: any) => {
       const url = e?.detail;
       if (typeof url === "string") void this.openExternal(url);
@@ -927,11 +947,23 @@ class AppState {
    * mid-run would abort the agent's work, so a busy tab gets a new tab instead.
    */
   async switchSession(path: string) {
+    // already open somewhere? just focus that tab — two pi processes writing the
+    // same session file is how a chat ends up "without memory".
+    const existing = this.tabs.find((x) => x.sessionFile === path);
+    if (existing) {
+      this.activeId = existing.id;
+      this.toast(t("toast.alreadyOpen"), "info");
+      return;
+    }
     const tab = this.active;
     if (tab && (tab.working || tab.streaming)) {
       const fresh = this.newTab(tab.cwd);
-      await this.connect({ tab: fresh });
-      await this.loadSessionInto(fresh, path);
+      // start the process WITH the session, so no stray empty session is created
+      await this.connect({ tab: fresh, session: path });
+      const history = await this.send(fresh.id, { type: "get_messages" });
+      this.hydrate(fresh, history?.messages ?? []);
+      await this.refreshStats(fresh);
+      await this.syncSessionMeta(fresh);
       this.toast(t("toast.openedInNewTab"), "info");
       return;
     }

@@ -244,24 +244,46 @@ describe("in-app dialogs", () => {
 });
 
 describe("sidebar navigation", () => {
-  it("opens a session in a new tab when the active tab is working", async () => {
+  function stubRpc() {
+    vi.spyOn(app as any, "connect").mockResolvedValue(undefined as any);
+    vi.spyOn(app as any, "send").mockResolvedValue({ messages: [] } as any);
+    vi.spyOn(app as any, "syncSessionMeta").mockResolvedValue(undefined as any);
+    vi.spyOn(app as any, "loadSessionInto").mockResolvedValue(undefined as any);
+  }
+
+  it("opens a busy tab's session in a new tab, spawning it with --session", async () => {
     const tab = freshTab();
     tab.working = true;
+    stubRpc();
     const before = app.tabs.length;
-    vi.spyOn(app as any, "connect").mockResolvedValue(undefined as any);
-    vi.spyOn(app as any, "loadSessionInto").mockResolvedValue(undefined as any);
-    await app.switchSession("/home/dante/.pi/agent/sessions/x.jsonl");
+    await app.switchSession("/home/dante/.pi/agent/sessions/a.jsonl");
     expect(app.tabs.length).toBe(before + 1);
-    expect(app.tabs[0].working).toBe(true); // o turno original continua vivo
+    expect(app.tabs[0].working).toBe(true);
+    // o novo tab já nasce apontando para a sessão (sem criar arquivo órfão)
+    expect((app as any).connect).toHaveBeenCalledWith(
+      expect.objectContaining({ session: "/home/dante/.pi/agent/sessions/a.jsonl" }),
+    );
   });
 
   it("reuses the tab when it is idle", async () => {
     const tab = freshTab();
     tab.working = false;
+    stubRpc();
     const before = app.tabs.length;
-    vi.spyOn(app as any, "loadSessionInto").mockResolvedValue(undefined as any);
     await app.switchSession("/home/dante/.x.jsonl");
     expect(app.tabs.length).toBe(before);
+  });
+
+  it("focuses the existing tab when the session is already open", async () => {
+    const tab = freshTab();
+    stubRpc();
+    tab.sessionFile = "/home/dante/.pi/agent/sessions/b.jsonl";
+    const other = app.newTab("/home/dante");
+    app.activeId = other.id;
+    const before = app.tabs.length;
+    await app.switchSession(tab.sessionFile!);
+    expect(app.tabs.length).toBe(before);
+    expect(app.activeId).toBe(tab.id);
   });
 });
 
