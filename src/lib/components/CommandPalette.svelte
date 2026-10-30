@@ -1,6 +1,8 @@
 <script lang="ts">
+  import { t } from "../i18n.svelte";
   import { open } from "@tauri-apps/plugin-dialog";
   import { app, THEMES } from "../store.svelte";
+  import { LOCALES, setLocale } from "../i18n.svelte";
 
   type Item = { id: string; label: string; hint?: string; group: string; run: () => void | Promise<void> };
 
@@ -10,31 +12,31 @@
 
   const items = $derived.by<Item[]>(() => {
     const list: Item[] = [
-      { id: "new", label: "Nova conversa", group: "ação", run: () => app.newSession() },
-      { id: "tab", label: "Nova aba (sessão paralela)", group: "ação", run: () => app.openTab() },
+      { id: "new", label: t("palette.newChat"), group: t("palette.action"), run: () => app.newSession() },
+      { id: "tab", label: t("palette.newTab"), group: t("palette.action"), run: () => app.openTab() },
       {
         id: "memory",
-        label: app.showMemory ? "Fechar painel de memória" : "Abrir memória",
-        group: "ação",
+        label: app.showMemory ? t("palette.closeMemory") : t("palette.openMemory"),
+        group: t("palette.action"),
         run: () => (app.showMemory = !app.showMemory),
       },
       {
         id: "compact",
-        label: "Compactar contexto",
-        group: "ação",
+        label: t("palette.compact"),
+        group: t("palette.action"),
         run: () => app.compact(),
       },
       {
         id: "reload",
-        label: "Recarregar sessão do disco (F5)",
-        hint: "pega mensagens escritas em outro processo",
-        group: "ação",
+        label: t("palette.reload"),
+        hint: t("palette.reloadHint"),
+        group: t("palette.action"),
         run: () => app.reloadSession(),
       },
       {
         id: "export",
-        label: "Exportar sessão em HTML",
-        group: "ação",
+        label: t("palette.export"),
+        group: t("palette.action"),
         run: async () => {
           const p = await app.exportHtml();
           if (p) app.toast(`exportado: ${p}`, "ok");
@@ -42,23 +44,29 @@
       },
       {
         id: "theme",
-        label: `Tema: ${THEMES.find((t) => t.id === app.theme)?.name ?? app.theme} → próximo`,
-        group: "ação",
+        label: t("palette.themeNext", { name: THEMES.find((x) => x.id === app.theme)?.name ?? app.theme }),
+        group: t("palette.action"),
         run: () => {
           const i = THEMES.findIndex((t) => t.id === app.theme);
           app.setTheme(THEMES[(i + 1) % THEMES.length].id);
         },
       },
+      ...LOCALES.map((l) => ({
+        id: `locale:${l.id}`,
+        label: `Language: ${l.label}`,
+        group: t("palette.action"),
+        run: () => setLocale(l.id),
+      })),
       ...THEMES.map((t) => ({
         id: `theme:${t.id}`,
-        label: `Tema: ${t.name}`,
-        group: "tema",
+        label: t("palette.themePrefix", { name: t.name }),
+        group: t("palette.theme"),
         run: () => app.setTheme(t.id),
       })),
       {
         id: "project",
-        label: "Trocar projeto (cwd)…",
-        group: "ação",
+        label: t("palette.project"),
+        group: t("palette.action"),
         run: async () => {
           const dir = await open({ directory: true, multiple: false });
           if (dir) await app.setCwd(dir as string);
@@ -66,28 +74,28 @@
       },
       {
         id: "sync",
-        label: "Sincronizar índice de memória",
-        group: "ação",
+        label: t("palette.sync"),
+        group: t("palette.action"),
         run: () => app.syncMemoryIndex(),
       },
-      { id: "palette-close", label: "Fechar paleta", group: "ação", run: () => (app.showPalette = false) },
+      { id: "palette-close", label: t("palette.close"), group: t("palette.action"), run: () => (app.showPalette = false) },
     ];
 
     for (const m of app.models) {
       list.push({
         id: `model:${m.provider}:${m.id}`,
-        label: `Modelo: ${m.name ?? m.id}`,
+        label: t("palette.modelPrefix", { name: m.name ?? m.id }),
         hint: m.provider,
-        group: "modelo",
+        group: t("palette.model"),
         run: () => app.setModel(m.provider, m.id),
       });
     }
     for (const c of app.commands) {
       list.push({
         id: `cmd:${c.name}`,
-        label: `/${c.name}`,
+        label: t("palette.cmdPrefix", { name: c.name }),
         hint: c.description ?? c.source,
-        group: "comando",
+        group: t("palette.command"),
         run: async () => {
           app.showPalette = false;
           await app.prompt(`/${c.name}`, []);
@@ -97,18 +105,18 @@
     for (const s of app.sessions.slice(0, 10)) {
       list.push({
         id: `ses:${s.id}`,
-        label: `Sessão: ${s.name ?? s.id.slice(0, 8)}`,
+        label: t("palette.sessionPrefix", { name: s.name ?? s.id.slice(0, 8) }),
         hint: s.cwd,
-        group: "sessão",
+        group: t("palette.session"),
         run: () => app.switchSession(s.path),
       });
     }
     for (const s of app.skills) {
       list.push({
         id: `skill:${s.name}`,
-        label: `Skill: ${s.name}`,
+        label: t("palette.skillPrefix", { name: s.name }),
         hint: s.description,
-        group: "skill",
+        group: t("palette.skill"),
         run: async () => {
           app.showMemory = true;
         },
@@ -179,7 +187,7 @@
 {#if app.showPalette}
   <div class="overlay" onclick={(e) => e.target === e.currentTarget && (app.showPalette = false)}>
     <div class="palette">
-      <input bind:this={input} bind:value={query} placeholder="comando, modelo, sessão, skill…" onkeydown={onKey} />
+      <input bind:this={input} bind:value={query} placeholder={t("palette.placeholder")} onkeydown={onKey} />
       <div class="list">
         {#each groupedItems as group (group.name)}
           <div class="group">{group.name}</div>
@@ -195,7 +203,7 @@
             </button>
           {/each}
         {:else}
-          <div class="empty">nada encontrado</div>
+          <div class="empty">{t("palette.empty")}</div>
         {/each}
       </div>
     </div>

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from "$lib/i18n.svelte";
   import { onMount, tick } from "svelte";
   import { getCurrentWebview } from "@tauri-apps/api/webview";
   import { app } from "$lib/store.svelte";
@@ -106,18 +107,18 @@
     {#if app.error}
       <div class="banner">
         ⚠ {app.error}
-        <button class="mini" onclick={() => app.connect()}>tentar de novo</button>
+        <button class="mini" onclick={() => app.connect()}>{t("app.retry")}</button>
       </div>
     {/if}
     {#if app.active?.externalChange}
       <div class="banner info">
-        🔄 esta sessão mudou no disco (outro processo escreveu nela)
-        <button class="mini" onclick={() => app.reloadSession()}>recarregar (F5)</button>
+        {t("page.externalChange")}
+        <button class="mini" onclick={() => app.reloadSession()}>{t("page.reload")}</button>
       </div>
     {/if}
     {#if app.costWarn}
       <div class="banner warn">
-        💸 custo desta sessão (${app.cost.toFixed(2)}) passou do limite de ${app.costLimit.toFixed(2)}
+        {t("page.costWarn", { cost: app.cost.toFixed(2), limit: app.costLimit.toFixed(2) })}
       </div>
     {/if}
 
@@ -126,14 +127,14 @@
         <div class="welcome">
           <div class="wlogo">◈</div>
           <h1>Hina</h1>
-          <p>pi desktop · memória, skills e ferramentas do seu agente</p>
+          <p>{t("app.tagline")}</p>
           <div class="tips">
-            <span>arraste arquivos</span>
-            <span>cole imagens</span>
-            <span>Ctrl+K comandos</span>
-            <span>Ctrl+M memória</span>
-            <span>Ctrl+Alt+H janela</span>
-            <span>Ctrl+Shift+R recarregar UI</span>
+            <span>{t("page.tipDrop")}</span>
+            <span>{t("page.tipPaste")}</span>
+            <span>{t("page.tipPalette")}</span>
+            <span>{t("page.tipMemory")}</span>
+            <span>{t("page.tipWindow")}</span>
+            <span>{t("page.tipReload")}</span>
           </div>
         </div>
       {:else}

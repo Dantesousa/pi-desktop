@@ -1,6 +1,8 @@
 <script lang="ts">
+  import { t } from "../i18n.svelte";
   import { open } from "@tauri-apps/plugin-dialog";
   import { app, THEMES } from "../store.svelte";
+  import { LOCALES, locale, setLocale } from "../i18n.svelte";
   import { api } from "../api";
 
   let showQueue = $state(false);
@@ -14,12 +16,12 @@
     try {
       piVersion = await api.piVersion();
       if (piVersion.hasUpdate) {
-        app.toast(`pi ${piVersion.latest} disponível (atual ${piVersion.current})`, "warn");
+        app.toast(`pi ${piVersion.latest} available (current ${piVersion.current})`, "warn");
       } else {
-        app.toast(`pi ${piVersion.current} — já está atualizado`, "ok");
+        app.toast(`pi ${piVersion.current} — already up to date`, "ok");
       }
     } catch (e: any) {
-      app.toast(`verificação falhou: ${e?.message ?? e}`, "error");
+      app.toast(`check failed: ${e?.message ?? e}`, "error");
     }
   }
 
@@ -31,7 +33,7 @@
       piVersion = await api.piVersion();
       await app.connect();
     } catch (e: any) {
-      app.toast(`update falhou: ${e?.message ?? e}`, "error");
+      app.toast(`update failed: ${e?.message ?? e}`, "error");
     } finally {
       updating = false;
     }
@@ -70,9 +72,9 @@
   async function exportHtml() {
     try {
       const path = await app.exportHtml();
-      if (path) app.toast(`exportado: ${path}`, "ok");
+      if (path) app.toast(t("toast.exported", { path }), "ok");
     } catch (e: any) {
-      app.toast(`export falhou: ${e?.message ?? e}`, "error");
+      app.toast(t("toast.exportFailed", { error: e?.message ?? e }), "error");
     }
   }
 </script>
@@ -80,14 +82,14 @@
 <header>
   <div class="session">
     <span class="dot" class:live={app.conn === "ready"}></span>
-    <span class="title">{app.sessionName ?? app.sessionId?.slice(0, 8) ?? "nova sessão"}</span>
-    <button class="proj" title="trocar projeto" onclick={pickProject}>
+    <span class="title">{app.sessionName ?? app.sessionId?.slice(0, 8) ?? t("app.newSession")}</span>
+    <button class="proj" title={t("top.project")} onclick={pickProject}>
       📁 {app.cwd.split("/").pop() || "/"}
     </button>
   </div>
 
   <div class="controls">
-    <select value={modelValue} onchange={onModel} title="modelo">
+    <select value={modelValue} onchange={onModel} title={t("top.model")}>
       {#if !app.models.length}
         <option value="">{app.modelLabel}</option>
       {/if}
@@ -100,7 +102,7 @@
       {/each}
     </select>
 
-    <select value={app.thinking} onchange={onThinking} title="thinking level">
+    <select value={app.thinking} onchange={onThinking} title={t("top.thinking")}>
       {#each app.active?.thinkingLevels ?? ["off"] as t}
         <option value={t}>{t}</option>
       {/each}
@@ -117,13 +119,13 @@
       <span class="cost" class:warn={app.costWarn}>${app.cost.toFixed(3)}</span>
     {/if}
     {#if app.pending > 0}
-      <button class="queue" onclick={() => (showQueue = !showQueue)} title="fila de mensagens">
-        {app.pending} na fila
+      <button class="queue" onclick={() => (showQueue = !showQueue)} title={t("top.queue")}>
+        {app.pending} {t("top.queue")}
       </button>
     {/if}
     {#if app.active?.retrying}
-      <button class="queue retry" onclick={() => app.abortRetry()} title="cancelar retry">
-        retry…
+      <button class="queue retry" onclick={() => app.abortRetry()} title={t("top.cancelRetry")}>
+        {t("top.retry")}
 
         <span class="x">×</span>
       </button>
@@ -132,22 +134,22 @@
     <button
       class="ghost"
       class:active={app.showBrowser}
-      title="Navegador do agente (Ctrl+Shift+W)"
+      title={t("top.browser")}
       onclick={() => app.toggleBrowser()}
     >
       🌐
     </button>
-    <button class="ghost" title="Recarregar sessão do disco (F5)" onclick={() => app.reloadSession()}>↻</button>
-    <button class="ghost" title="Exportar HTML" onclick={exportHtml}>⤓</button>
+    <button class="ghost" title={t("top.reloadSession")} onclick={() => app.reloadSession()}>↻</button>
+    <button class="ghost" title={t("top.export")} onclick={exportHtml}>⤓</button>
     <button
       class="ghost"
       class:active={app.showMemory}
-      title="Memória (Ctrl+M)"
+      title={t("top.memory")}
       onclick={() => (app.showMemory = !app.showMemory)}
     >
       🧠
     </button>
-    <button class="ghost" class:active={showSettings} title="Ajustes" onclick={() => (showSettings = !showSettings)}>
+    <button class="ghost" class:active={showSettings} title={t("top.settings")} onclick={() => (showSettings = !showSettings)}>
       ⚙
     </button>
   </div>
@@ -155,19 +157,19 @@
   {#if showQueue && app.pending > 0}
     <div class="queuebox">
       {#if app.active?.queue.steering.length}
-        <div class="qlabel">desvio (steer)</div>
+        <div class="qlabel">{t("top.steerQueue")}</div>
         {#each app.active.queue.steering as q}
           <div class="qitem">{q}</div>
         {/each}
       {/if}
       {#if app.active?.queue.followUp.length}
-        <div class="qlabel">depois (follow-up)</div>
+        <div class="qlabel">{t("top.followQueue")}</div>
         {#each app.active.queue.followUp as q}
           <div class="qitem">{q}</div>
         {/each}
       {/if}
       <div class="qfoot">
-        <button class="mini" onclick={() => { showQueue = false; app.clearQueue(); }}>limpar fila</button>
+        <button class="mini" onclick={() => { showQueue = false; app.clearQueue(); }}>{t("top.clearQueue")}</button>
       </div>
     </div>
   {/if}
@@ -175,15 +177,15 @@
   {#if showSettings}
     <div class="settings">
       <label>
-        <span>Permissões</span>
+        <span>{t("top.permissions")}</span>
         <select value={app.gateMode} onchange={(e) => app.setGate((e.target as HTMLSelectElement).value)}>
-          <option value="off">desligado</option>
-          <option value="dangerous">só perigosos</option>
-          <option value="all">aprovar tudo</option>
+          <option value="off">{t("top.gateOff")}</option>
+          <option value="dangerous">{t("top.gateDangerous")}</option>
+          <option value="all">{t("top.gateAll")}</option>
         </select>
       </label>
       <label>
-        <span>Limite de custo (US$)</span>
+        <span>{t("top.costLimit")}</span>
         <input
           type="number"
           min="0"
@@ -193,7 +195,7 @@
         />
       </label>
       <div class="themes">
-        <span class="lbl">tema</span>
+        <span class="lbl">{t("top.theme")}</span>
         <div class="grid">
           {#each THEMES as t}
             <button
@@ -214,16 +216,16 @@
       </div>
       <div class="row2">
         <label class="accent">
-          <span>destaque</span>
+          <span>{t("top.accent")}</span>
           <input
             type="color"
             value={app.accent || "#7aa2f7"}
             oninput={(e) => app.setAccent((e.target as HTMLInputElement).value)}
           />
         </label>
-        <button class="mini" onclick={() => app.setAccent("")} title="voltar à cor do tema">auto</button>
+        <button class="mini" onclick={() => app.setAccent("")} title={t("top.accentAuto")}>auto</button>
         <label class="fontsel">
-          <span>texto</span>
+          <span>{t("top.font")}</span>
           <select
             value={String(app.chatFont)}
             onchange={(e) => app.setChatFont(Number((e.target as HTMLSelectElement).value))}
@@ -236,7 +238,7 @@
         </label>
       </div>
       <label>
-        <span>Projeto</span>
+        <span>{t("top.projectLabel")}</span>
         <input value={app.cwd} readonly />
       </label>
       <label>
@@ -250,7 +252,7 @@
             checked={app.active?.autoCompaction ?? true}
             onchange={(e) => app.setAutoCompaction((e.target as HTMLInputElement).checked)}
           />
-          compactação automática
+          {t("top.autoCompaction")}
         </label>
         <label class="cb">
           <input
@@ -258,46 +260,55 @@
             checked={app.active?.autoRetry ?? true}
             onchange={(e) => app.setAutoRetry((e.target as HTMLInputElement).checked)}
           />
-          retry automático
+          {t("top.autoRetry")}
         </label>
       </div>
       <label>
-        <span>durante a execução (steer)</span>
+        <span>{t("top.steeringMode")}</span>
         <select
           value={app.active?.steeringMode ?? "all"}
           onchange={(e) => app.setSteeringMode((e.target as HTMLSelectElement).value)}
         >
-          <option value="all">entregar todas</option>
-          <option value="one-at-a-time">uma por vez</option>
+          <option value="all">{t("top.deliverAll")}</option>
+          <option value="one-at-a-time">{t("top.oneAtATime")}</option>
         </select>
       </label>
       <label>
-        <span>depois de terminar (follow-up)</span>
+        <span>{t("top.followUpMode")}</span>
         <select
           value={app.active?.followUpMode ?? "one-at-a-time"}
           onchange={(e) => app.setFollowUpMode((e.target as HTMLSelectElement).value)}
         >
-          <option value="all">entregar todas</option>
-          <option value="one-at-a-time">uma por vez</option>
+          <option value="all">{t("top.deliverAll")}</option>
+          <option value="one-at-a-time">{t("top.oneAtATime")}</option>
         </select>
       </label>
       <div class="toolrow">
-        <button class="mini" onclick={() => (app.showBash = true)}>bash (Ctrl+B)</button>
-        <button class="mini" onclick={() => (app.showFork = true)}>retomar de…</button>
-        <button class="mini" onclick={() => (app.showTree = true)}>árvore</button>
-        <button class="mini" onclick={() => app.cloneSession()}>clonar</button>
+        <button class="mini" onclick={() => (app.showBash = true)}>{t("top.bash")}</button>
+        <button class="mini" onclick={() => (app.showFork = true)}>{t("top.fork")}</button>
+        <button class="mini" onclick={() => (app.showTree = true)}>{t("top.tree")}</button>
+        <button class="mini" onclick={() => app.cloneSession()}>{t("top.clone")}</button>
       </div>
+
+      <label>
+        <span>{t("top.language")}</span>
+        <select value={locale()} onchange={(e) => setLocale((e.target as HTMLSelectElement).value as any)}>
+          {#each LOCALES as l}
+            <option value={l.id}>{l.label}</option>
+          {/each}
+        </select>
+      </label>
 
       <div class="piver">
         <span class="faint">pi {piVersion?.current ?? "—"}{piVersion?.latest ? ` · latest ${piVersion.latest}` : ""}</span>
-        <button class="mini" onclick={checkPi} disabled={updating}>verificar</button>
+        <button class="mini" onclick={checkPi} disabled={updating}>{t("top.check")}</button>
         <button class="mini" onclick={updatePi} disabled={updating}>
-          {updating ? "atualizando…" : "atualizar"}
+          {updating ? t("top.updating") : t("top.update")}
         </button>
       </div>
       <div class="foot">
-        <button onclick={() => app.connect()}>reconectar</button>
-        <button onclick={() => (showSettings = false)}>fechar</button>
+        <button onclick={() => app.connect()}>{t("app.reconnect")}</button>
+        <button onclick={() => (showSettings = false)}>{t("common.close")}</button>
       </div>
     </div>
   {/if}

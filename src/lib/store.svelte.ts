@@ -5,6 +5,7 @@ import {
   sendNotification,
 } from "@tauri-apps/plugin-notification";
 import { api } from "./api";
+import { t, initLocale, setLocale as setLocaleImpl, locale, type LocaleId } from "./i18n.svelte";
 import { extractImages } from "./media";
 import type { Chip, Msg, ModelInfo, Part, SessionInfo, SkillInfo } from "./types";
 
@@ -391,6 +392,7 @@ class AppState {
       this.theme = urlTheme;
       localStorage.setItem("pi.theme", urlTheme);
     }
+    initLocale();
     this.applyTheme();
     const panel = new URLSearchParams(location.search).get("panel");
     if (panel === "bash") this.showBash = true;
@@ -530,21 +532,21 @@ class AppState {
   async enableBrowser() {
     try {
       await api.browserEnable();
-      this.toast("navegador liberado para o agente — reinicie a aba para carregar as ferramentas", "ok");
+      this.toast(t("browser.enabled"), "ok");
       await this.pollBrowser(true);
       this.toggleBrowser(true);
     } catch (e: any) {
-      this.toast(`não consegui habilitar: ${e?.message ?? e}`, "error");
+      this.toast(t("toast.browserEnableFailed", { error: e?.message ?? e }), "error");
     }
   }
 
   async disableBrowser() {
     try {
       await api.browserDisable();
-      this.toast("navegador desabilitado (reinicie a aba para remover as ferramentas)", "info");
+      this.toast(t("browser.disabled"), "info");
       await this.pollBrowser(false);
     } catch (e: any) {
-      this.toast(`falhou: ${e?.message ?? e}`, "error");
+      this.toast(t("toast.browserDisableFailed", { error: e?.message ?? e }), "error");
     }
   }
 
@@ -594,7 +596,7 @@ class AppState {
         tab.holders = holders;
         if (holders.length) {
           const who = holders.map((h) => `pid ${h.pid}`).join(", ");
-          this.toast(`esta sessão também está aberta em outro processo (${who})`, "warn");
+          this.toast(t("toast.sessionOpenElsewhere", { who }), "warn");
         }
       }
     } catch {
@@ -626,6 +628,10 @@ class AppState {
   setCostLimit(value: number) {
     this.costLimit = value;
     localStorage.setItem("pi.costLimit", String(value));
+  }
+
+  setLocale(id: LocaleId) {
+    setLocaleImpl(id);
   }
 
   setTheme(theme: string) {
@@ -770,7 +776,7 @@ class AppState {
         newMsg({
           key: uid(),
           role: "system",
-          parts: [{ ci: 0, kind: "text", text: `Falha ao enviar: ${e?.message ?? e}` }],
+          parts: [{ ci: 0, kind: "text", text: t("toast.sendFailed", { error: e?.message ?? e }) }],
           ts: Date.now(),
           error: String(e),
         }),
@@ -803,7 +809,7 @@ class AppState {
           stagedPath: a.stagedPath ?? undefined,
         });
       } catch (e: any) {
-        this.toast(`anexo falhou: ${e?.message ?? e}`, "error");
+        this.toast(t("toast.attachmentFailed", { error: e?.message ?? e }), "error");
       }
     }
   }
@@ -873,7 +879,7 @@ class AppState {
     const tab = this.active;
     const path = tab.sessionFile;
     if (!path) {
-      this.toast("sessão ainda não tem arquivo em disco", "warn");
+      this.toast(t("toast.reloadNoFile"), "warn");
       return;
     }
     try {
@@ -885,14 +891,14 @@ class AppState {
       this.hydrate(tab, history?.messages ?? []);
       await this.refreshStats(tab);
       await this.syncSessionMeta(tab, false);
-      this.toast("sessão recarregada do disco", "ok");
+      this.toast(t("toast.reloaded"), "ok");
     } catch (e: any) {
-      this.toast(`recarregar falhou: ${e?.message ?? e}`, "error");
+      this.toast(t("toast.reloadFailed", { error: e?.message ?? e }), "error");
     }
   }
 
-  async switchSession(path: string) {
-    const tab = this.active;
+  /** Loads a session file into an existing tab (interrupts that tab's run). */
+  private async loadSessionInto(tab: Tab, path: string) {
     await this.send(tab.id, { type: "switch_session", sessionPath: path });
     tab.messages = [];
     tab.currentKey = null;
@@ -901,6 +907,23 @@ class AppState {
     this.hydrate(tab, history?.messages ?? []);
     await this.refreshStats(tab);
     await this.syncSessionMeta(tab);
+  }
+
+  /**
+   * Opens a session from the sidebar. Switching the session of a tab that is
+   * mid-run would abort the agent's work, so a busy tab gets a new tab instead.
+   */
+  async switchSession(path: string) {
+    const tab = this.active;
+    if (tab && (tab.working || tab.streaming)) {
+      const fresh = this.newTab(tab.cwd);
+      await this.connect({ tab: fresh });
+      await this.loadSessionInto(fresh, path);
+      this.toast(t("toast.openedInNewTab"), "info");
+      return;
+    }
+    if (!tab) return;
+    await this.loadSessionInto(tab, path);
   }
 
   private hydrate(tab: Tab, messages: any[]) {
@@ -1007,15 +1030,15 @@ class AppState {
   async revertPart(part: any) {
     const snap = part.snap;
     if (!snap?.canRestore) {
-      this.toast("sem snapshot deste arquivo — não dá pra reverter", "warn");
+      this.toast(t("toast.noSnapshot"), "warn");
       return;
     }
     try {
       await api.fileRestore(snap.path, snap.exists ? snap.content : null);
       part.reverted = true;
-      this.toast(`revertido: ${snap.path}`, "ok");
+      this.toast(t("toast.reverted", { path: snap.path }), "ok");
     } catch (e: any) {
-      this.toast(`reverter falhou: ${e?.message ?? e}`, "error");
+      this.toast(t("toast.revertFailed", { error: e?.message ?? e }), "error");
     }
   }
 
@@ -1040,9 +1063,9 @@ class AppState {
         await api.sessionRename(session.path, clean);
       }
       await this.loadSessions();
-      this.toast("sessão renomeada", "ok");
+      this.toast(t("toast.renameOk"), "ok");
     } catch (e: any) {
-      this.toast(`renomear falhou: ${e?.message ?? e}`, "error");
+      this.toast(t("toast.renameFailed", { error: e?.message ?? e }), "error");
     }
   }
 
@@ -1053,9 +1076,9 @@ class AppState {
       this.pinned = this.pinned.filter((p) => p !== session.path);
       localStorage.setItem("pi.pinned", JSON.stringify(this.pinned));
       await this.loadSessions();
-      this.toast(`sessão movida para a lixeira: ${dest}`, "ok");
+      this.toast(t("toast.deleteOk", { path: dest }), "ok");
     } catch (e: any) {
-      this.toast(`apagar falhou: ${e?.message ?? e}`, "error");
+      this.toast(t("toast.deleteFailed", { error: e?.message ?? e }), "error");
     }
   }
 
@@ -1204,10 +1227,10 @@ class AppState {
     };
     try {
       const path = await api.writeDiagnostics(JSON.stringify(payload, null, 2));
-      this.toast(`diagnóstico salvo em ${path}`, "ok");
+      this.toast(t("toast.diagnosticsSaved", { path }), "ok");
       return path;
     } catch (e: any) {
-      this.toast(`falha ao salvar diagnóstico: ${e?.message ?? e}`, "error");
+      this.toast(t("toast.diagnosticsFailed", { error: e?.message ?? e }), "error");
       return null;
     }
   }
@@ -1222,12 +1245,12 @@ class AppState {
       tab.pending = 0;
       if (texts.length) {
         this.draftRestore = texts.join("\n\n");
-        this.toast(`fila limpa (${texts.length}) — texto devolvido ao campo`, "ok");
+        this.toast(t("toast.queueCleared", { n: texts.length }), "ok");
       } else {
-        this.toast("fila vazia", "info");
+        this.toast(t("toast.queueEmpty"), "info");
       }
     } catch (e: any) {
-      this.toast(`limpar fila falhou: ${e?.message ?? e}`, "error");
+      this.toast(t("toast.queueFailed", { error: e?.message ?? e }), "error");
     }
   }
 
@@ -1235,9 +1258,9 @@ class AppState {
     try {
       await this.sendActive({ type: "abort_retry" });
       this.active.retrying = false;
-      this.toast("retry cancelado", "ok");
+      this.toast(t("toast.retryCancelled"), "ok");
     } catch (e: any) {
-      this.toast(`cancelar retry falhou: ${e?.message ?? e}`, "error");
+      this.toast(t("toast.retryFailed", { error: e?.message ?? e }), "error");
     }
   }
 
@@ -1271,15 +1294,15 @@ class AppState {
     try {
       const data = await this.send(tab.id, { type: "cycle_model" });
       if (!data?.model) {
-        this.toast("só há um modelo disponível", "info");
+        this.toast(t("toast.onlyOneModel"), "info");
         return;
       }
       tab.model = data.model;
       if (data.thinkingLevel) tab.thinking = data.thinkingLevel;
       void this.loadThinkingLevels(tab);
-      this.toast(`modelo: ${data.model.name ?? data.model.id}`, "ok");
+      this.toast(t("toast.modelChanged", { name: data.model.name ?? data.model.id }), "ok");
     } catch (e: any) {
-      this.toast(`trocar modelo falhou: ${e?.message ?? e}`, "error");
+      this.toast(t("toast.modelFailed", { error: e?.message ?? e }), "error");
     }
   }
 
@@ -1288,13 +1311,13 @@ class AppState {
     try {
       const data = await this.send(tab.id, { type: "cycle_thinking_level" });
       if (!data?.level) {
-        this.toast("este modelo não suporta raciocínio", "info");
+        this.toast(t("toast.noThinking"), "info");
         return;
       }
       tab.thinking = data.level;
-      this.toast(`thinking: ${data.level}`, "ok");
+      this.toast(t("toast.thinkingChanged", { level: data.level }), "ok");
     } catch (e: any) {
-      this.toast(`trocar thinking falhou: ${e?.message ?? e}`, "error");
+      this.toast(t("toast.thinkingFailed", { error: e?.message ?? e }), "error");
     }
   }
 
@@ -1338,7 +1361,7 @@ class AppState {
       const data = await this.sendActive({ type: "get_fork_messages" });
       return data?.messages ?? [];
     } catch (e: any) {
-      this.toast(`listar pontos de fork falhou: ${e?.message ?? e}`, "error");
+      this.toast(t("toast.forkListFailed", { error: e?.message ?? e }), "error");
       return [];
     }
   }
@@ -1348,13 +1371,13 @@ class AppState {
     try {
       const data = await this.send(tab.id, { type: "fork", entryId });
       if (data?.cancelled) {
-        this.toast("fork cancelado por uma extensão", "warn");
+        this.toast(t("toast.forkCancelled"), "warn");
         return;
       }
       await this.reloadAfterSessionChange(tab);
-      this.toast("fork criado", "ok");
+      this.toast(t("toast.forkDone"), "ok");
     } catch (e: any) {
-      this.toast(`fork falhou: ${e?.message ?? e}`, "error");
+      this.toast(t("toast.forkFailed", { error: e?.message ?? e }), "error");
     }
   }
 
@@ -1363,13 +1386,13 @@ class AppState {
     try {
       const data = await this.send(tab.id, { type: "clone" });
       if (data?.cancelled) {
-        this.toast("clone cancelado", "warn");
+        this.toast(t("toast.cloneCancelled"), "warn");
         return;
       }
       await this.reloadAfterSessionChange(tab);
-      this.toast("sessão clonada", "ok");
+      this.toast(t("toast.cloneDone"), "ok");
     } catch (e: any) {
-      this.toast(`clone falhou: ${e?.message ?? e}`, "error");
+      this.toast(t("toast.cloneFailed", { error: e?.message ?? e }), "error");
     }
   }
 
@@ -1378,7 +1401,7 @@ class AppState {
       const data = await this.sendActive({ type: "get_tree" });
       return { tree: data?.tree ?? [], leafId: data?.leafId ?? null };
     } catch (e: any) {
-      this.toast(`árvore falhou: ${e?.message ?? e}`, "error");
+      this.toast(t("toast.treeFailed", { error: e?.message ?? e }), "error");
       return null;
     }
   }
@@ -1399,7 +1422,7 @@ class AppState {
       const data = await this.sendActive(since ? { type: "get_entries", since } : { type: "get_entries" });
       return data?.entries ?? [];
     } catch (e: any) {
-      this.toast(`entradas falhou: ${e?.message ?? e}`, "error");
+      this.toast(t("toast.entriesFailed", { error: e?.message ?? e }), "error");
       return [];
     }
   }
@@ -1407,14 +1430,14 @@ class AppState {
   async copyTranscriptJson() {
     const entries = await this.sessionEntries();
     if (!entries.length) {
-      this.toast("sessão vazia", "info");
+      this.toast(t("toast.emptySession"), "info");
       return;
     }
     try {
       await copyText(JSON.stringify(entries, null, 2));
-      this.toast(`histórico completo copiado (${entries.length} entradas)`, "ok");
+      this.toast(t("toast.copied", { n: entries.length }), "ok");
     } catch (e: any) {
-      this.toast(`copiar falhou: ${e?.message ?? e}`, "error");
+      this.toast(t("toast.copyFailed", { error: e?.message ?? e }), "error");
     }
   }
 
@@ -1423,13 +1446,13 @@ class AppState {
       const data = await this.sendActive({ type: "get_last_assistant_text" });
       const text = data?.text;
       if (!text) {
-        this.toast("nenhuma resposta de texto ainda", "info");
+        this.toast(t("toast.noResponse"), "info");
         return;
       }
       await copyText(text);
-      this.toast("última resposta copiada", "ok");
+      this.toast(t("toast.lastCopied"), "ok");
     } catch (e: any) {
-      this.toast(`copiar falhou: ${e?.message ?? e}`, "error");
+      this.toast(t("toast.copyFailed", { error: e?.message ?? e }), "error");
     }
   }
 
@@ -1441,9 +1464,9 @@ class AppState {
   async openExternal(url: string) {
     try {
       await api.openExternal(url);
-      this.toast(`aberto no navegador: ${url.slice(0, 60)}`, "info");
+      this.toast(t("toast.openedExternal", { url: url.slice(0, 60) }), "info");
     } catch (e: any) {
-      this.toast(`não consegui abrir: ${e?.message ?? e}`, "error");
+      this.toast(t("toast.openFailed", { error: e?.message ?? e }), "error");
     }
   }
 
@@ -1451,15 +1474,15 @@ class AppState {
   askAgent(text: string) {
     this.draftRestore = text;
     this.focusToken++;
-    this.toast("pedido pronto no campo — revise e envie", "info");
+    this.toast(t("toast.agentReady"), "info");
   }
 
   async syncMemoryIndex() {
     try {
       await this.sendActive({ type: "prompt", message: "/memory-sync-markdown" });
-      this.toast("índice de memória sincronizado", "ok");
+      this.toast(t("toast.syncOk"), "ok");
     } catch (e: any) {
-      this.toast(`sync falhou: ${e?.message ?? e}`, "error");
+      this.toast(t("toast.syncFailed", { error: e?.message ?? e }), "error");
     }
   }
 
@@ -1514,7 +1537,7 @@ class AppState {
     try {
       await this.sendActive({ type: "extension_ui_response", id: req.id, ...payload });
     } catch (e: any) {
-      this.toast(`resposta falhou: ${e?.message ?? e}`, "error");
+      this.toast(t("toast.permAnswerFailed", { error: e?.message ?? e }), "error");
     }
   }
 
@@ -1526,7 +1549,7 @@ class AppState {
     }
     if (!this.notificationsAllowed) return;
     try {
-      await sendNotification({ title: "Hina · tarefa concluída", body: text.slice(0, 160) });
+      await sendNotification({ title: t("toast.taskDone"), body: text.slice(0, 160) });
     } catch {
       /* ignore */
     }
@@ -1726,8 +1749,8 @@ class AppState {
         tab.taskStartedAt = null;
         if (wasWorking && elapsed > 12000 && !document.hasFocus()) {
           const last = [...tab.messages].reverse().find((m) => m.role === "assistant");
-          const text = last?.parts.map((p: any) => p.text ?? "").join(" ") ?? "concluído";
-          this.notifyDone(text.replace(/\s+/g, " ").trim() || "concluído");
+          const text = last?.parts.map((p: any) => p.text ?? "").join(" ") ?? t("toast.done");
+          this.notifyDone(text.replace(/\s+/g, " ").trim() || t("toast.done"));
         }
         break;
       }
@@ -1784,7 +1807,7 @@ class AppState {
 
       case "extension_error":
         this.stderr.push(`[extension] ${rec.extensionPath}: ${rec.error}`);
-        this.toast(`extensão: ${rec.error}`, "error");
+        this.toast(t("toast.extension", { error: rec.error }), "error");
         break;
 
       default:
@@ -1835,7 +1858,7 @@ export async function copyText(text: string): Promise<void> {
   ta.select();
   const ok = document.execCommand("copy");
   document.body.removeChild(ta);
-  if (!ok) throw new Error("clipboard indisponível");
+  if (!ok) throw new Error("clipboard unavailable");
 }
 
 export function basename(path: string): string {

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from "../i18n.svelte";
   import { app } from "../store.svelte";
 </script>
 
@@ -10,14 +11,14 @@
         class="lbl"
         role="button"
         tabindex="-1"
-        title="duplo clique para renomear"
+        title={t("tabs.renameHint")}
         ondblclick={async (e) => {
           e.stopPropagation();
           const name = await app.askPrompt({
-            title: "Nome da aba",
+            title: t("tabs.renameTitle"),
             value: tab.title,
-            placeholder: "nome da aba",
-            confirmLabel: "renomear",
+            placeholder: t("tabs.renamePlaceholder"),
+            confirmLabel: t("common.rename"),
           });
           if (name != null) app.renameTab(tab.id, name);
         }}
@@ -38,7 +39,7 @@
       >
     </button>
   {/each}
-  <button class="add" title="nova aba (Ctrl+T)" onclick={() => app.openTab()}>+</button>
+  <button class="add" title={t("tabs.new")} onclick={() => app.openTab()}>+</button>
 </div>
 
 <style>

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from "../i18n.svelte";
   import { app } from "../store.svelte";
   import { relTime } from "../markdown";
 
@@ -34,11 +35,11 @@
 
   async function rename(s: any) {
     const name = await app.askPrompt({
-      title: "Renomear sessão",
+      title: t("sidebar.renameTitle"),
       message: s.path.split("/").pop(),
       value: s.name ?? "",
-      placeholder: "nome da sessão",
-      confirmLabel: "renomear",
+      placeholder: t("sidebar.renamePlaceholder"),
+      confirmLabel: t("common.rename"),
     });
     if (name == null) return;
     await app.renameSession(s, name);
@@ -46,9 +47,9 @@
 
   async function remove(s: any) {
     const ok = await app.askConfirm({
-      title: "Apagar sessão?",
-      message: `"${s.name ?? s.id.slice(0, 8)}" vai para a lixeira do app (~/.cache/pi-desktop/trash/sessions). Dá pra recuperar de lá.`,
-      confirmLabel: "mover para a lixeira",
+      title: t("sidebar.deleteTitle"),
+      message: t("sidebar.deleteBody", { name: s.name ?? s.id.slice(0, 8) }),
+      confirmLabel: t("sidebar.trashAction"),
       danger: true,
     });
     if (!ok) return;
@@ -65,9 +66,9 @@
     </div>
   </div>
 
-  <button class="primary new" onclick={() => app.newSession()}>+ nova conversa</button>
+  <button class="primary new" onclick={() => app.newSession()}>{t("sidebar.newChat")}</button>
 
-  <input class="filter" placeholder="filtrar sessões…" bind:value={filter} />
+  <input class="filter" placeholder={t("sidebar.filter")} bind:value={filter} />
 
   <div class="sessions">
     {#each visible as s (s.path)}
@@ -80,32 +81,32 @@
           <span class="meta">{s.cwd.split("/").pop() || "/"} · {relTime(s.modifiedMs)}</span>
         </button>
         <div class="acts">
-          <button class="act" title="fixar" onclick={() => app.togglePin(s.path)}>
+          <button class="act" title={t("sidebar.pin")} onclick={() => app.togglePin(s.path)}>
             {app.isPinned(s.path) ? "📌" : "📍"}
           </button>
-          <button class="act" title="renomear" onclick={() => rename(s)}>✎</button>
-          <button class="act danger" title="apagar (lixeira)" onclick={() => remove(s)}>🗑</button>
+          <button class="act" title={t("sidebar.rename")} onclick={() => rename(s)}>✎</button>
+          <button class="act danger" title={t("sidebar.delete")} onclick={() => remove(s)}>🗑</button>
         </div>
       </div>
     {:else}
-      <div class="empty">nenhuma sessão</div>
+      <div class="empty">{t("sidebar.noSessions")}</div>
     {/each}
   </div>
 
   <div class="foot">
     <button class="ghost" class:active={app.showMemory} onclick={() => (app.showMemory = !app.showMemory)}>
-      🧠 memória
+      🧠 {t("sidebar.memory")}
     </button>
-    <button class="ghost" title="paleta de comandos (Ctrl+K)" onclick={() => (app.showPalette = true)}>
-      paleta
+    <button class="ghost" title={t("sidebar.paletteHint")} onclick={() => (app.showPalette = true)}>
+      {t("sidebar.palette")}
     </button>
-    <button class="ghost" title="atualizar sessões" onclick={() => app.loadSessions()}>⟳</button>
+    <button class="ghost" title={t("sidebar.refresh")} onclick={() => app.loadSessions()}>⟳</button>
   </div>
 
   {#if app.conn !== "ready"}
     <div class="conn">
-      {app.conn === "starting" ? "iniciando pi…" : app.conn === "dead" ? "pi parado" : "—"}
-      <button class="mini" onclick={() => app.connect()}>reconectar</button>
+      {app.conn === "starting" ? "starting pi…" : app.conn === "dead" ? "pi stopped" : "—"}
+      <button class="mini" onclick={() => app.connect()}>{t("app.reconnect")}</button>
     </div>
   {/if}
 </aside>

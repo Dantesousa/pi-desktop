@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from "../i18n.svelte";
   import { renderMarkdown, highlightAll } from "../markdown";
   import { hydrateImages } from "../media";
   import { app } from "../store.svelte";
@@ -55,7 +56,7 @@
         {:else if part.kind === "thinking"}
           <div class="thinking">
             <button class="th-head" onclick={() => (thinkingOpen = !thinkingOpen)}>
-              💭 raciocínio {thinkingOpen ? "▾" : "▸"}
+              💭 {t("msg.thinking")} {thinkingOpen ? "▾" : "▸"}
             </button>
             {#if thinkingOpen}
               <div class="th-body">{part.text}</div>

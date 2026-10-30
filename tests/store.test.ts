@@ -243,6 +243,28 @@ describe("in-app dialogs", () => {
   });
 });
 
+describe("sidebar navigation", () => {
+  it("opens a session in a new tab when the active tab is working", async () => {
+    const tab = freshTab();
+    tab.working = true;
+    const before = app.tabs.length;
+    vi.spyOn(app as any, "connect").mockResolvedValue(undefined as any);
+    vi.spyOn(app as any, "loadSessionInto").mockResolvedValue(undefined as any);
+    await app.switchSession("/home/dante/.pi/agent/sessions/x.jsonl");
+    expect(app.tabs.length).toBe(before + 1);
+    expect(app.tabs[0].working).toBe(true); // o turno original continua vivo
+  });
+
+  it("reuses the tab when it is idle", async () => {
+    const tab = freshTab();
+    tab.working = false;
+    const before = app.tabs.length;
+    vi.spyOn(app as any, "loadSessionInto").mockResolvedValue(undefined as any);
+    await app.switchSession("/home/dante/.x.jsonl");
+    expect(app.tabs.length).toBe(before);
+  });
+});
+
 describe("themes", () => {
   it("applies the preset and a custom accent on the root element", () => {
     app.setTheme("hacker");

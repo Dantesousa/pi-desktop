@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from "../i18n.svelte";
   import { open } from "@tauri-apps/plugin-dialog";
   import { app, fmtSize } from "../store.svelte";
 
@@ -129,35 +130,35 @@
     <textarea
       bind:this={input}
       bind:value={text}
-      placeholder="Pergunte algo, arraste arquivos ou cole uma imagem…"
+      placeholder={t("composer.placeholder")}
       rows="1"
       onkeydown={onKeydown}
       onpaste={onPaste}
     ></textarea>
     <div class="actions">
-      <button class="ghost" title="Anexar arquivos" onclick={pickFiles}>📎</button>
+      <button class="ghost" title={t("composer.attach")} onclick={pickFiles}>📎</button>
       {#if app.working}
         <select
           class="behavior"
           bind:value={app.sendBehavior}
-          title="como entregar a mensagem durante a execução"
+          title={t("composer.behavior")}
         >
-          <option value="steer">desviar</option>
-          <option value="followUp">depois</option>
+          <option value="steer">{t("composer.steer")}</option>
+          <option value="followUp">{t("composer.followUp")}</option>
         </select>
       {/if}
       <span class="hint">
         {#if app.working}
           <span class="work"><span class="pulse"></span>{app.activity ?? "trabalhando…"}</span>
         {:else}
-          Enter envia · Shift+Enter quebra linha · Ctrl+K comandos
+          {t("composer.hint")}
         {/if}
       </span>
       {#if app.working}
-        <button class="stop" onclick={() => app.abort()}>■ parar</button>
+        <button class="stop" onclick={() => app.abort()}>{t("composer.stop")}</button>
       {:else}
         <button class="primary" onclick={send} disabled={!text.trim() && !app.chips.length}>
-          enviar →
+          {t("composer.send")}
         </button>
       {/if}
     </div>

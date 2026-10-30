@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from "../i18n.svelte";
   import { app } from "../store.svelte";
   import { relTime } from "../markdown";
 
@@ -23,31 +24,31 @@
   <section class="panel">
     <header>
       <span class="dot" class:live={app.browser.updated && Date.now() - app.browser.updated < 5000}></span>
-      <span class="title" title={app.browser.url}>{app.browser.title || "navegador do agente"}</span>
+      <span class="title" title={app.browser.url}>{app.browser.title || t("browser.title")}</span>
       <span class="spacer"></span>
       {#if app.browser.updated}
         <span class="faint">{relTime(app.browser.updated)}</span>
       {/if}
-      <button class="mini" title="fechar" onclick={() => app.toggleBrowser(false)}>×</button>
+      <button class="mini" title={t("common.close")} onclick={() => app.toggleBrowser(false)}>×</button>
     </header>
 
     <div class="stage">
       {#if app.browser.img}
-        <img src={app.browser.img} alt="preview do navegador" />
+        <img src={app.browser.img} alt={t("browser.preview")} />
       {:else if app.browser.enabled}
         <div class="empty">
-          <p>O agente ainda não abriu nenhuma página.</p>
-          <p class="faint">Peça algo como “abre example.com e me mostra o título”.</p>
+          <p>{t("browser.nothing")}</p>
+          <p class="faint">{t("browser.hint")}</p>
         </div>
       {:else}
         <div class="empty">
-          <p>O navegador está <strong>desligado</strong>.</p>
+          <p>{@html t("browser.off")}</p>
           <p class="faint">
             Ao ativar, um servidor MCP local (<code>hina-browser</code>) é registrado e o agente ganha
             ferramentas para navegar, clicar, digitar e tirar screenshots — que aparecem aqui.
           </p>
           <button class="primary" onclick={enable} disabled={busy}>
-            {busy ? "ativando…" : "ativar navegador"}
+            {busy ? t("browser.enabling") : t("browser.enable")}
           </button>
         </div>
       {/if}
@@ -56,10 +57,10 @@
     <footer>
       <input
         bind:value={cmd}
-        placeholder="pedir ao agente: “entra no site X e faz Y”"
+        placeholder={t("browser.ask")}
         onkeydown={(e) => e.key === "Enter" && ask()}
       />
-      <button class="mini" onclick={ask} disabled={!cmd.trim()}>pedir</button>
+      <button class="mini" onclick={ask} disabled={!cmd.trim()}>{t("browser.send")}</button>
     </footer>
     <div class="url">{app.browser.url || "—"}</div>
   </section>

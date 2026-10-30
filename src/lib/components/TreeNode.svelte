@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from "../i18n.svelte";
   import Self from "./TreeNode.svelte";
 
   let { node, leafId, depth = 0 }: { node: any; leafId: string | null; depth?: number } = $props();
@@ -36,7 +37,7 @@
     {/if}
     <span class="kind">{entry.type}</span>
     <span class="label" title={label}>{label}</span>
-    {#if isLeaf}<span class="badge">atual</span>{/if}
+    {#if isLeaf}<span class="badge">{t("tree.current")}</span>{/if}
   </div>
   {#if open}
     {#each node.children ?? [] as child}

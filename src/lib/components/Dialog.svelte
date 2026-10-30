@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from "../i18n.svelte";
   import { app } from "../store.svelte";
 
   let inputEl = $state<HTMLInputElement | null>(null);
@@ -56,9 +57,9 @@
         />
       {/if}
       <div class="row">
-        <button onclick={cancel}>cancelar</button>
+        <button onclick={cancel}>{t("common.cancel")}</button>
         <button class="primary" class:danger={d.danger} onclick={accept}>
-          {d.confirmLabel ?? (d.kind === "prompt" ? "salvar" : "confirmar")}
+          {d.confirmLabel ?? (d.kind === "prompt" ? t("common.save") : t("common.confirm"))}
         </button>
       </div>
     </div>

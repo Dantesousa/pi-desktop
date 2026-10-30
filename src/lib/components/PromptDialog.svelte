@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from "../i18n.svelte";
   import { app } from "../store.svelte";
   import type { UiRequest } from "../store.svelte";
 
@@ -32,7 +33,7 @@
 {#if req}
   <div class="overlay" onclick={(e) => e.target === e.currentTarget && answer({ cancelled: true })}>
     <div class="modal" role="dialog" tabindex="-1" onkeydown={onKey}>
-      <div class="title">{req.title ?? "Confirmação"}</div>
+      <div class="title">{req.title ?? t("dialog.confirmation")}</div>
       {#if req.message}
         <div class="msg">{req.message}</div>
       {/if}
@@ -52,8 +53,8 @@
         </div>
       {:else if req.method === "confirm"}
         <div class="options row">
-          <button class="opt" onclick={() => answer({ confirmed: false })}>Não</button>
-          <button class="opt primary" onclick={() => answer({ confirmed: true })}>Sim</button>
+          <button class="opt" onclick={() => answer({ confirmed: false })}>{t("common.no")}</button>
+          <button class="opt primary" onclick={() => answer({ confirmed: true })}>{t("common.yes")}</button>
         </div>
       {:else if req.method === "input"}
         <input
@@ -66,8 +67,8 @@
           }}
         />
         <div class="foot">
-          <button onclick={() => answer({ cancelled: true })}>cancelar</button>
-          <button class="primary" onclick={() => answer({ value })}>enviar</button>
+          <button onclick={() => answer({ cancelled: true })}>{t("common.cancel")}</button>
+          <button class="primary" onclick={() => answer({ value })}>{t("composer.send")}</button>
         </div>
       {:else if req.method === "editor"}
         <textarea
@@ -79,13 +80,13 @@
           }}
         ></textarea>
         <div class="foot">
-          <button onclick={() => answer({ cancelled: true })}>cancelar</button>
-          <button class="primary" onclick={() => answer({ value: editorText })}>salvar</button>
+          <button onclick={() => answer({ cancelled: true })}>{t("common.cancel")}</button>
+          <button class="primary" onclick={() => answer({ value: editorText })}>{t("common.save")}</button>
         </div>
       {/if}
 
       {#if app.requests.length > 1}
-        <div class="queue">{app.requests.length - 1} pedido(s) na fila</div>
+        <div class="queue">{app.requests.length - 1} queued</div>
       {/if}
     </div>
   </div>

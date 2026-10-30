@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from "../i18n.svelte";
   import { lineDiff, addedOnly } from "../diff";
   import { app } from "../store.svelte";
 
@@ -89,10 +90,10 @@
       {#if part.snap?.canRestore}
         <div class="revertrow">
           {#if part.reverted}
-            <span class="reverted">↺ revertido</span>
+            <span class="reverted">{t("msg.reverted")}</span>
           {:else}
             <button class="mini revert" onclick={() => app.revertPart(part)}>
-              ↺ reverter {part.snap.exists ? "edições" : "(arquivo novo)"}
+              {t("msg.revert")} {part.snap.exists ? t("msg.revertEdits") : t("msg.newFile")}
             </button>
           {/if}
         </div>
@@ -112,7 +113,7 @@
       {/each}
 
       {#if !diffs.length}
-        <div class="label">argumentos</div>
+        <div class="label">{t("tool.args")}</div>
         <pre class="args">{argsJson}</pre>
       {/if}
 
@@ -131,10 +132,10 @@
 
       {#if output}
         <div class="label">
-          resultado
+          {t("tool.result")}
           {#if output.length >= 1600}
             <button class="mini" onclick={() => (showAll = !showAll)}>
-              {showAll ? "recolher" : "tudo"}
+              {showAll ? t("tool.collapse") : t("tool.all")}
             </button>
           {/if}
         </div>

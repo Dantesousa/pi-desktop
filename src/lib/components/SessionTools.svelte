@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from "../i18n.svelte";
   import { app } from "../store.svelte";
   import TreeNode from "./TreeNode.svelte";
 
@@ -42,8 +43,8 @@
   <div class="overlay" onclick={(e) => e.target === e.currentTarget && (app.showFork = false)}>
     <div class="box" role="dialog" aria-modal="true" tabindex="-1">
       <div class="head">
-        <strong>Retomar de uma mensagem</strong>
-        <span class="faint">cria um fork a partir daquele ponto</span>
+        <strong>{t("tree.forkTitle")}</strong>
+        <span class="faint">{t("tree.forkHint")}</span>
         <span class="spacer"></span>
         <button class="mini" onclick={() => (app.showFork = false)}>×</button>
       </div>
@@ -54,7 +55,7 @@
             <span class="eid">{m.entryId}</span>
           </button>
         {:else}
-          <div class="empty">{busy ? "carregando…" : "nenhuma mensagem de usuário ainda"}</div>
+          <div class="empty">{busy ? t("common.loading") : t("tree.noMessages")}</div>
         {/each}
       </div>
     </div>
@@ -65,7 +66,7 @@
   <div class="overlay" onclick={(e) => e.target === e.currentTarget && (app.showTree = false)}>
     <div class="box" role="dialog" aria-modal="true" tabindex="-1">
       <div class="head">
-        <strong>Árvore da sessão</strong>
+        <strong>{t("tree.title")}</strong>
         <span class="faint">{tree?.leafId ? `leaf ${tree.leafId}` : ""}</span>
         <span class="spacer"></span>
         <button class="mini" onclick={() => (app.showTree = false)}>×</button>
@@ -74,7 +75,7 @@
         {#each tree?.tree ?? [] as node}
           <TreeNode {node} leafId={tree?.leafId ?? null} />
         {:else}
-          <div class="empty">{busy ? "carregando…" : "sessão vazia"}</div>
+          <div class="empty">{busy ? t("common.loading") : t("tree.empty")}</div>
         {/each}
       </div>
     </div>

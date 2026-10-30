@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from "../i18n.svelte";
   import { app } from "../store.svelte";
 
   let command = $state("");
@@ -50,7 +51,7 @@
         <span class="spacer"></span>
         <label class="ctx">
           <input type="checkbox" bind:checked={exclude} />
-          fora do contexto
+          {t("bash.outsideContext")}
         </label>
         <button class="mini" onclick={() => (app.showBash = false)}>×</button>
       </div>
@@ -59,26 +60,25 @@
         bind:this={input}
         bind:value={command}
         rows="2"
-        placeholder="comando… (Enter roda, Shift+Enter quebra linha)"
+        placeholder={t("bash.placeholder")}
         onkeydown={onKey}
         spellcheck="false"
       ></textarea>
 
       <div class="actions">
         {#if app.active?.bashRunning}
-          <button class="danger" onclick={() => app.abortBash()}>■ abortar</button>
-          <span class="running">executando…</span>
+          <button class="danger" onclick={() => app.abortBash()}>{t("bash.abort")}</button>
+          <span class="running">{t("bash.running")}</span>
         {:else}
-          <button class="primary" onclick={run} disabled={!command.trim()}>executar</button>
+          <button class="primary" onclick={run} disabled={!command.trim()}>{t("bash.run")}</button>
         {/if}
         <span class="spacer"></span>
-        <button class="mini" onclick={() => (app.active!.bashLog = "")}>limpar saída</button>
+        <button class="mini" onclick={() => (app.active!.bashLog = "")}>{t("bash.clear")}</button>
       </div>
 
-      <pre class="out" bind:this={out}>{app.active?.bashLog || "— sem saída ainda —"}</pre>
+      <pre class="out" bind:this={out}>{app.active?.bashLog || t("bash.noOutput")}</pre>
       <div class="hint">
-        A saída entra no contexto do modelo na próxima mensagem (a menos que "fora do contexto"
-        esteja marcado).
+        {t("bash.note")}
       </div>
     </div>
   </div>

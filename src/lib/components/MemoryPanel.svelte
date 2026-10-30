@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from "../i18n.svelte";
   import { app } from "../store.svelte";
   import { api } from "../api";
   import type { MemoryFile, SkillInfo, SessionHit } from "../types";
@@ -44,14 +45,14 @@
   let newCommand = $state("");
   let newUrl = $state("");
 
-  const tabs: { id: Tab; label: string }[] = [
-    { id: "memory", label: "memória" },
-    { id: "user", label: "usuário" },
-    { id: "failure", label: "falhas" },
-    { id: "sessions", label: "sessões" },
-    { id: "skills", label: "skills" },
-    { id: "mcp", label: "mcp" },
-  ];
+  const tabs = $derived<{ id: Tab; label: string }[]>([
+    { id: "memory", label: t("mem.tab.memory") },
+    { id: "user", label: t("mem.tab.user") },
+    { id: "failure", label: t("mem.tab.failure") },
+    { id: "sessions", label: t("mem.tab.sessions") },
+    { id: "skills", label: t("mem.tab.skills") },
+    { id: "mcp", label: t("mem.tab.mcp") },
+  ]);
 
   async function load() {
     if (tab === "sessions") return;
@@ -111,9 +112,9 @@
   async function remove(i: number) {
     if (!file) return;
     const ok = await app.askConfirm({
-      title: "Apagar entrada da memória?",
+      title: t("mem.deleteTitle"),
       message: (file.entries[i].body ?? "").slice(0, 200),
-      confirmLabel: "apagar",
+      confirmLabel: t("mem.deleteAction"),
       danger: true,
     });
     if (!ok) return;
@@ -166,10 +167,10 @@
 
   async function newSkill() {
     const name = await app.askPrompt({
-      title: "Nova skill",
-      message: "slug em minúsculas, ex: rimworld-1-7-dev",
-      placeholder: "nome-da-skill",
-      confirmLabel: "criar",
+      title: t("mem.skillNewTitle"),
+      message: t("mem.skillNewHint"),
+      placeholder: t("mem.skillNewPlaceholder"),
+      confirmLabel: t("mem.skillCreate"),
     });
     if (!name) return;
     const body = `---\nname: ${name}\ndescription: descreva quando usar esta skill (o gatilho que o usuário digita)\n---\n\n## When to Use\n\n- \n\n## Procedure\n\n1. \n\n## Pitfalls\n\n- \n\n## Verification\n\n- \n`;
@@ -191,7 +192,7 @@
       `Revise a memória persistente em ~/.pi/agent/pi-hermes-memory/ (MEMORY.md, USER.md, failures.md) e consolide entradas redundantes ou obsoletas usando as ferramentas memory_* / edit, respeitando os limites de caracteres. Não apague informação sobre preferências do usuário. Ao final, rode /memory-sync-markdown.`,
       [],
     );
-    app.toast("consolidação enviada ao agente", "info");
+    app.toast(t("mem.consolidated"), "info");
   }
 
   async function syncIndex() {
@@ -207,7 +208,7 @@
       await api.mcpSave(cfg);
       mcpRaw = cfg;
       mcpServers = await api.mcpServers();
-      app.toast("mcp.json salvo — reinicie a aba para aplicar", "ok");
+      app.toast(t("mem.mcpSaved"), "ok");
     } catch (e: any) {
       err = String(e?.message ?? e);
     }
@@ -221,9 +222,9 @@
 
   async function removeServer(name: string) {
     const ok = await app.askConfirm({
-      title: "Remover servidor MCP?",
-      message: `"${name}" será removido de ~/.pi/agent/mcp.json (backup automático).`,
-      confirmLabel: "remover",
+      title: t("mem.mcpRemoveTitle"),
+      message: t("mem.mcpRemoveBody", { name }),
+      confirmLabel: t("mem.mcpRemove"),
       danger: true,
     });
     if (!ok) return;
@@ -238,7 +239,7 @@
     const url = newUrl.trim();
     const cmd = newCommand.trim();
     if (!url && !cmd) {
-      err = "informe comando ou URL";
+      err = t("mem.mcpCommand");
       return;
     }
     await saveMcp((cfg) => {
@@ -282,7 +283,7 @@
     hubError = null;
     try {
       hubResults = await api.hubMcpSearch(hubQuery, 30);
-      if (!hubResults.length) hubError = "nada encontrado no registro oficial";
+      if (!hubResults.length) hubError = t("mem.mcpNothing");
     } catch (e: any) {
       hubError = String(e?.message ?? e);
     } finally {
@@ -307,7 +308,7 @@
     activeRepo = null;
     try {
       repoResults = await api.hubSkillsSearch(hubQuery, 15);
-      if (!repoResults.length) hubError = "nenhum repositório encontrado";
+      if (!repoResults.length) hubError = t("mem.noRepo");
     } catch (e: any) {
       hubError = String(e?.message ?? e);
     } finally {
@@ -321,7 +322,7 @@
     activeRepo = repo;
     try {
       repoSkills = await api.hubSkillsInRepo(repo);
-      if (!repoSkills.length) hubError = "nenhuma SKILL.md nesse repositório";
+      if (!repoSkills.length) hubError = t("mem.noSkillFile");
     } catch (e: any) {
       hubError = String(e?.message ?? e);
     } finally {
@@ -354,7 +355,7 @@
         <button class="tab" class:active={tab === t.id} onclick={() => (tab = t.id)}>{t.label}</button>
       {/each}
     </div>
-    <button class="ghost mini close" title="fechar" onclick={() => (app.showMemory = false)}>×</button>
+    <button class="ghost mini close" title={t("common.close")} onclick={() => (app.showMemory = false)}>×</button>
   </div>
 
   {#if err}
@@ -365,26 +366,26 @@
     {#if file}
       <div class="usage">
         <div class="ubar"><div class="ufill" style={`width:${pct}%`}></div></div>
-        <span>{file.chars.toLocaleString("pt-BR")} / {file.limit.toLocaleString("pt-BR")} chars</span>
-        <span class="faint">· {file.entries.length} entradas</span>
+        <span>{t("mem.chars", { used: file.chars.toLocaleString(), limit: file.limit.toLocaleString() })}</span>
+        <span class="faint">{t("mem.entries", { n: file.entries.length })}</span>
       </div>
       <div class="toolbar">
-        <button class="mini" onclick={() => { adding = true; draft = ""; editing = null; }}>+ entrada</button>
-        <button class="mini" onclick={syncIndex} title="reconciliar o índice SQLite com os .md">
-          ⟳ sync
+        <button class="mini" onclick={() => { adding = true; draft = ""; editing = null; }}>{t("mem.addEntry")}</button>
+        <button class="mini" onclick={syncIndex} title={t("mem.syncHint")}>
+          {t("mem.sync")}
         </button>
-        <button class="mini" onclick={consolidate} title="pedir ao agente para consolidar a memória">
-          ✦ consolidar
+        <button class="mini" onclick={consolidate} title={t("mem.consolidateHint")}>
+          {t("mem.consolidate")}
         </button>
         <button class="mini" onclick={load}>↻</button>
       </div>
 
       {#if adding}
         <div class="editor">
-          <textarea bind:value={draft} placeholder="nova entrada…" rows="4"></textarea>
+          <textarea bind:value={draft} placeholder={t("mem.newEntry")} rows="4"></textarea>
           <div class="row">
-            <button class="mini" onclick={() => (adding = false)}>cancelar</button>
-            <button class="mini primary" onclick={addEntry}>salvar</button>
+            <button class="mini" onclick={() => (adding = false)}>{t("common.cancel")}</button>
+            <button class="mini primary" onclick={addEntry}>{t("common.save")}</button>
           </div>
         </div>
       {/if}
@@ -397,15 +398,15 @@
               <span class="faint">{entry.created ?? ""}</span>
               <span class="spacer"></span>
               {#if editing !== i}
-                <button class="mini" onclick={() => startEdit(i, entry.raw)}>editar</button>
+                <button class="mini" onclick={() => startEdit(i, entry.raw)}>{t("mem.edit")}</button>
                 <button class="mini danger" onclick={() => remove(i)}>×</button>
               {/if}
             </div>
             {#if editing === i}
               <textarea bind:value={draft} rows="5"></textarea>
               <div class="row">
-                <button class="mini" onclick={() => (editing = null)}>cancelar</button>
-                <button class="mini primary" onclick={() => saveEdit(i)}>salvar</button>
+                <button class="mini" onclick={() => (editing = null)}>{t("common.cancel")}</button>
+                <button class="mini primary" onclick={() => saveEdit(i)}>{t("common.save")}</button>
               </div>
             {:else}
               <div class="body">{entry.body}</div>
@@ -425,10 +426,10 @@
     <div class="searchbox">
       <input
         bind:value={query}
-        placeholder="buscar no histórico (FTS)…"
+        placeholder={t("mem.searchHistory")}
         onkeydown={(e) => e.key === "Enter" && search()}
       />
-      <button class="mini" onclick={search}>buscar</button>
+      <button class="mini" onclick={search}>{t("common.search")}</button>
     </div>
     <div class="hits">
       {#each hits as h}
@@ -440,7 +441,7 @@
           <div class="hbody">{h.content.slice(0, 500)}</div>
         </div>
       {:else}
-        <div class="empty">{query ? "nada encontrado" : "digite pra buscar"}</div>
+        <div class="empty">{query ? t("mem.nothingFound") : t("mem.typeToSearch")}</div>
       {/each}
     </div>
   {/if}
@@ -448,26 +449,26 @@
   {#if tab === "mcp"}
     <div class="toolbar">
       <button class="mini" class:sel={mcpView === "list"} onclick={() => (mcpView = "list")}>
-        configurados
+        {t("mem.mcpConfigured")}
       </button>
       <button class="mini" class:sel={mcpView === "hub"} onclick={() => (mcpView = "hub")}>
-        hub
+        {t("mem.hub")}
       </button>
       <span class="spacer"></span>
       <button class="mini" onclick={load}>↻</button>
       <button class="mini" onclick={checkMcp} disabled={mcpBusy}>
-        {mcpBusy ? "testando…" : "testar conexão"}
+        {mcpBusy ? t("mem.mcpTesting") : t("mem.mcpTest")}
       </button>
-      <span class="faint small">{mcpServers.length} servidor(es)</span>
+      <span class="faint small">{t("mem.mcpServers", { n: mcpServers.length })}</span>
     </div>
     {#if mcpView === "hub"}
       <div class="searchbox">
         <input
           bind:value={hubQuery}
-          placeholder="buscar no registro oficial (MCP)…"
+          placeholder={t("mem.mcpSearch")}
           onkeydown={(e) => e.key === "Enter" && searchMcpHub()}
         />
-        <button class="mini" onclick={searchMcpHub} disabled={hubBusy}>buscar</button>
+        <button class="mini" onclick={searchMcpHub} disabled={hubBusy}>{t("common.search")}</button>
       </div>
       {#if hubError}<div class="err">{hubError}</div>{/if}
       <div class="entries">
@@ -479,7 +480,7 @@
               <span class="spacer"></span>
               <button
                 class="mini"
-                title="pedir ao agente para configurar"
+                title={t("mem.askAgentConfig")}
                 onclick={() =>
                   app.askAgent(
                     `Configure o servidor MCP "${c.name}" em ~/.pi/agent/mcp.json.\nDados do registro oficial: ${c.target}${c.description ? `\nDescrição: ${c.description}` : ""}\nUse a mesma estrutura dos outros servidores e valide com \`pi mcp list\`.`,
@@ -487,13 +488,13 @@
               >
                 🤖
               </button>
-              <button class="mini primary" onclick={() => addCandidate(c)}>+ add</button>
+              <button class="mini primary" onclick={() => addCandidate(c)}>{t("common.add")}</button>
             </div>
             <div class="faint small">{c.description}</div>
             <div class="faint small mono">{c.target}</div>
           </div>
         {:else}
-          <div class="empty">{hubBusy ? "buscando…" : "busque um servidor no registro"}</div>
+          <div class="empty">{hubBusy ? t("common.loading") : t("mem.mcpSearchEmpty")}</div>
         {/each}
       </div>
     {:else}
@@ -513,16 +514,16 @@
           {#if srv.description}<div class="faint small">{srv.description}</div>{/if}
         </div>
       {:else}
-        <div class="empty">nenhum servidor MCP configurado</div>
+        <div class="empty">{t("mem.mcpNone")}</div>
       {/each}
 
       <div class="entry addbox">
-        <div class="faint small">adicionar servidor</div>
-        <input bind:value={newName} placeholder="nome" />
-        <input bind:value={newCommand} placeholder="comando + args (stdio)" />
-        <input bind:value={newUrl} placeholder="ou URL (http)" />
+        <div class="faint small">{t("mem.mcpAddServer")}</div>
+        <input bind:value={newName} placeholder={t("mem.mcpName")} />
+        <input bind:value={newCommand} placeholder={t("mem.mcpCommand")} />
+        <input bind:value={newUrl} placeholder={t("mem.mcpUrl")} />
         <div class="row">
-          <button class="mini primary" onclick={addServer}>adicionar</button>
+          <button class="mini primary" onclick={addServer}>{t("common.add")}</button>
         </div>
       </div>
 
@@ -536,10 +537,10 @@
   {#if tab === "skills"}
     {#if skillBody !== null}
       <div class="toolbar">
-        <button class="mini" onclick={() => { skillBody = null; skillDirty = false; }}>← voltar</button>
+        <button class="mini" onclick={() => { skillBody = null; skillDirty = false; }}>{t("mem.back")}</button>
         <span class="faint">{skillName}</span>
         <span class="spacer"></span>
-        <button class="mini primary" onclick={saveSkill} disabled={!skillDirty}>salvar</button>
+        <button class="mini primary" onclick={saveSkill} disabled={!skillDirty}>{t("common.save")}</button>
       </div>
       <textarea
         class="skilledit"
@@ -549,22 +550,20 @@
       ></textarea>
     {:else if skillView === "hub"}
       <div class="toolbar">
-        <button class="mini" onclick={() => { skillView = "list"; repoSkills = []; activeRepo = null; }}>
-          ← instaladas
-        </button>
+        <button class="mini" onclick={() => { skillView = "list"; repoSkills = []; activeRepo = null; }}>{t("mem.installed")}</button>
         <span class="spacer"></span>
         {#if activeRepo}
-          <button class="mini" onclick={() => { activeRepo = null; repoSkills = []; }}>← repos</button>
+          <button class="mini" onclick={() => { activeRepo = null; repoSkills = []; }}>{t("mem.repos")}</button>
         {/if}
       </div>
       {#if !activeRepo}
         <div class="searchbox">
           <input
             bind:value={hubQuery}
-            placeholder="buscar skills no GitHub…"
+            placeholder={t("mem.skillsSearch")}
             onkeydown={(e) => e.key === "Enter" && searchSkillsHub()}
           />
-          <button class="mini" onclick={searchSkillsHub} disabled={hubBusy}>buscar</button>
+          <button class="mini" onclick={searchSkillsHub} disabled={hubBusy}>{t("common.search")}</button>
         </div>
         {#if hubError}<div class="err">{hubError}</div>{/if}
         <div class="entries">
@@ -578,7 +577,7 @@
               <div class="faint small">{r.description}</div>
             </button>
           {:else}
-            <div class="empty">{hubBusy ? "buscando…" : "busque um repositório com skills"}</div>
+            <div class="empty">{hubBusy ? t("common.loading") : t("mem.skillsSearchEmpty")}</div>
           {/each}
         </div>
       {:else}
@@ -591,7 +590,7 @@
                 <span class="spacer"></span>
                 <button
                   class="mini"
-                  title="pedir ao agente para instalar/adaptar"
+                  title={t("mem.askAgentInstall")}
                   onclick={() =>
                     app.askAgent(
                       `Instale a skill "${s.name}" de ${activeRepo} (diretório ${s.dir || "/"}) em ~/.pi/agent/pi-hermes-memory/skills/ e ajuste o SKILL.md se necessário.`,
@@ -599,23 +598,21 @@
                 >
                   🤖
                 </button>
-                <button class="mini primary" onclick={() => installSkill(s)} disabled={hubBusy}>
-                  instalar
-                </button>
+                <button class="mini primary" onclick={() => installSkill(s)} disabled={hubBusy}>{t("mem.install")}</button>
               </div>
               <div class="body"><strong>{s.name}</strong></div>
               <div class="faint small">{s.dir || "/"} · {s.files} arquivos</div>
             </div>
           {:else}
-            <div class="empty">{hubBusy ? "carregando…" : "nenhuma skill"}</div>
+            <div class="empty">{hubBusy ? t("common.loading") : t("mem.skillsNone")}</div>
           {/each}
         </div>
       {/if}
     {:else}
       <div class="toolbar">
-        <button class="mini" onclick={newSkill}>+ nova skill</button>
+        <button class="mini" onclick={newSkill}>{t("mem.skillNew")}</button>
         <button class="mini" onclick={() => { skillView = "hub"; searchSkillsHub(); }}>
-          hub
+          {t("mem.hub")}
         </button>
         <button class="mini" onclick={async () => { await app.loadSkills(); skills = app.skills; }}>↻</button>
       </div>
@@ -630,7 +627,7 @@
             <div class="faint small">{s.description}</div>
           </button>
         {:else}
-          <div class="empty">nenhuma skill</div>
+          <div class="empty">{t("mem.skillsNone")}</div>
         {/each}
       </div>
     {/if}
