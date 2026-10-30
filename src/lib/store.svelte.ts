@@ -402,7 +402,11 @@ class AppState {
     if (panel === "memory") this.showMemory = true;
     if (panel === "browser") this.toggleBrowser(true);
     try {
-      this.build = await api.buildInfo();
+      const forced = new URLSearchParams(location.search).get("channel");
+      this.build =
+        forced === "dev"
+          ? { channel: "dev", version: this.appVersion, commit: "preview", tag: "" }
+          : await api.buildInfo();
       if (this.build?.channel === "dev") {
         document.title = `DEV · Hina ${this.build.commit ? `(${this.build.commit})` : ""}`;
       }

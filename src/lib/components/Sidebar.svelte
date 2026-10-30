@@ -61,7 +61,12 @@
   <div class="brand">
     <div class="logo">◈</div>
     <div>
-      <div class="name">Hina</div>
+      <div class="name">
+        Hina
+        {#if app.build?.channel === "dev"}
+          <span class="devchip" title={`dev build ${app.build.commit}`}>DEV</span>
+        {/if}
+      </div>
       <div class="sub">pi desktop</div>
     </div>
   </div>
@@ -145,6 +150,18 @@
     font-weight: 700;
     font-size: 13.5px;
     letter-spacing: 0.01em;
+  }
+  .devchip {
+    font-family: var(--mono);
+    font-size: 8.5px;
+    letter-spacing: 0.08em;
+    padding: 1px 5px;
+    border-radius: 999px;
+    background: rgba(245, 158, 11, 0.18);
+    border: 1px solid rgba(245, 158, 11, 0.55);
+    color: #fbbf24;
+    vertical-align: middle;
+    margin-left: 2px;
   }
   .sub {
     font-size: 10px;
