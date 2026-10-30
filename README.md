@@ -110,7 +110,7 @@ The dev build is deliberately a *different app* so it can never be confused with
 | UI | `DEV` badge with the commit hash, `<title>` prefixed | none |
 | single instance | separate lock, so both can coexist | — |
 
-`npm run dev` uses `src-tauri/tauri.dev.conf.json` for that identity. The channel is
+`npm run dev:clean` (or `npm run dev:app`) uses `src-tauri/tauri.dev.conf.json` for that identity. The channel is
 compiled in by `build.rs` (`PI_CHANNEL`, defaulting to the cargo profile) and shown
 in the settings popover.
 
@@ -171,7 +171,7 @@ The dev build is deliberately a *different app* so it can never be confused with
 | UI | `DEV` badge with the commit hash, `<title>` prefixed | none |
 | single instance | separate lock, so both can coexist | — |
 
-`npm run dev` uses `src-tauri/tauri.dev.conf.json` for that identity. The channel is
+`npm run dev:clean` (or `npm run dev:app`) uses `src-tauri/tauri.dev.conf.json` for that identity. The channel is
 compiled in by `build.rs` (`PI_CHANNEL`, defaulting to the cargo profile) and shown
 in the settings popover.
 
