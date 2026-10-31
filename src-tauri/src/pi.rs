@@ -35,6 +35,7 @@ pub struct StartOptions {
     pub thinking: Option<String>,
     pub session: Option<String>,
     pub no_session: Option<bool>,
+    pub gate: Option<String>,
     pub extra_args: Option<Vec<String>>,
 }
 
@@ -136,6 +137,9 @@ pub fn start(app: &AppHandle, state: &PiState, tab: &str, opts: StartOptions) ->
             cmd.current_dir(p);
         }
     }
+    if let Some(gate) = opts.gate.as_ref() {
+        cmd.env("PI_DESKTOP_GATE", gate);
+    }
     cmd.env("FORCE_COLOR", "0");
     cmd.env("NO_COLOR", "1");
     cmd.stdin(Stdio::piped())
@@ -144,7 +148,7 @@ pub fn start(app: &AppHandle, state: &PiState, tab: &str, opts: StartOptions) ->
 
     let mut child = cmd
         .spawn()
-        .map_err(|e| format!("falha ao iniciar `{bin}`: {e}"))?;
+        .map_err(|e| format!("failed to start `{bin}`: {e}"))?;
 
     let pid = child.id();
     let stdin = child
@@ -282,7 +286,7 @@ pub fn send(state: &PiState, tab: &str, command: serde_json::Value) -> Result<()
         .write_all(line.as_bytes())
         .and_then(|_| stdin.write_all(b"\n"))
         .and_then(|_| stdin.flush())
-        .map_err(|e| format!("falha ao escrever no pi: {e}"))
+        .map_err(|e| format!("failed to write to pi: {e}"))
 }
 
 pub fn stop(state: &PiState, tab: &str) -> Result<(), String> {
@@ -338,14 +342,14 @@ fn run_capture(bin: &str, args: &[&str]) -> Result<String, String> {
     let output = Command::new(bin)
         .args(args)
         .output()
-        .map_err(|e| format!("falha ao rodar `{bin} {}`: {e}", args.join(" ")))?;
+        .map_err(|e| format!("failed to run `{bin} {}`: {e}", args.join(" ")))?;
     let mut text = String::from_utf8_lossy(&output.stdout).trim().to_string();
     let err = String::from_utf8_lossy(&output.stderr).trim().to_string();
     if text.is_empty() {
         text = err.clone();
     }
     if !output.status.success() && text.is_empty() {
-        return Err(format!("`{bin}` terminou com {:?}", output.status.code()));
+        return Err(format!("`{bin}` exited with {:?}", output.status.code()));
     }
     Ok(text)
 }

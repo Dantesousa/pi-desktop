@@ -6,6 +6,12 @@
   import { api } from "../api";
 
   let showQueue = $state(false);
+  let modelFilter = $state("");
+  const filteredModels = $derived(
+    app.models.filter((m) =>
+      `${m.provider} ${m.name ?? ""} ${m.id}`.toLowerCase().includes(modelFilter.toLowerCase()),
+    ),
+  );
   let showSettings = $state(
     typeof location !== "undefined" && new URLSearchParams(location.search).get("settings") === "1",
   );
@@ -41,7 +47,7 @@
 
   const grouped = $derived.by(() => {
     const map = new Map<string, any[]>();
-    for (const m of app.models) {
+    for (const m of app.visibleModels) {
       if (!map.has(m.provider)) map.set(m.provider, []);
       map.get(m.provider)!.push(m);
     }
@@ -96,7 +102,9 @@
       {#each grouped as [provider, models]}
         <optgroup label={provider}>
           {#each models as m}
-            <option value={`${m.provider}::${m.id}`}>{m.name ?? m.id}</option>
+            <option value={`${m.provider}::${m.id}`}>
+              {app.isFave(m) ? "★ " : ""}{m.name ?? m.id}
+            </option>
           {/each}
         </optgroup>
       {/each}
@@ -298,6 +306,38 @@
           {/each}
         </select>
       </label>
+
+      <div class="models">
+        <div class="mrow">
+          <span class="lbl">{t("top.models")}</span>
+          <input class="mfilter" placeholder={t("top.modelsFilter")} bind:value={modelFilter} />
+        </div>
+        <div class="mlist">
+          {#each filteredModels as m (m.provider + m.id)}
+            <div class="mitem" class:hidden={app.isHidden(m)}>
+              <button
+                class="star"
+                class:on={app.isFave(m)}
+                title={t("top.favorite")}
+                onclick={() => app.toggleFave(m)}
+              >
+                {app.isFave(m) ? "★" : "☆"}
+              </button>
+              <span class="mname" title={`${m.provider}/${m.id}`}>{m.name ?? m.id}</span>
+              <span class="mprov">{m.provider}</span>
+              <button
+                class="eye"
+                title={app.isHidden(m) ? t("top.showModel") : t("top.hideModel")}
+                onclick={() => app.toggleHidden(m)}
+              >
+                {app.isHidden(m) ? "◌" : "◉"}
+              </button>
+            </div>
+          {:else}
+            <div class="faint">{t("common.none")}</div>
+          {/each}
+        </div>
+      </div>
 
       <div class="buildrow">
         <span class="faint">
@@ -597,6 +637,79 @@
     height: 26px;
     padding: 2px;
     background: var(--bg-2);
+  }
+  .models {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    border-top: 1px solid var(--border-soft);
+    padding-top: 8px;
+  }
+  .mrow {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .mrow .lbl {
+    flex: 0 0 auto;
+  }
+  .mfilter {
+    flex: 1;
+    font-size: 10.5px;
+    padding: 3px 6px;
+  }
+  .mlist {
+    max-height: 150px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    background: var(--bg-2);
+    border: 1px solid var(--border-soft);
+    border-radius: 8px;
+    padding: 4px;
+  }
+  .mitem {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    padding: 1px 2px;
+    border-radius: 5px;
+  }
+  .mitem:hover {
+    background: var(--panel-2);
+  }
+  .mitem.hidden {
+    opacity: 0.45;
+  }
+  .star,
+  .eye {
+    border: none;
+    background: none;
+    padding: 0 3px;
+    font-size: 11px;
+    color: var(--text-faint);
+    line-height: 1;
+  }
+  .star.on {
+    color: var(--yellow);
+  }
+  .star:hover,
+  .eye:hover {
+    background: none;
+    color: var(--text);
+  }
+  .mname {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .mprov {
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--text-faint);
   }
   .buildrow {
     display: flex;

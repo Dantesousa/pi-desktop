@@ -178,7 +178,7 @@ fn skills_list() -> Vec<memory::SkillInfo> {
 
 #[tauri::command]
 fn skill_read(path: String) -> Result<String, String> {
-    std::fs::read_to_string(&path).map_err(|e| format!("falha ao ler {path}: {e}"))
+    std::fs::read_to_string(&path).map_err(|e| format!("failed to read {path}: {e}"))
 }
 
 #[tauri::command]
@@ -243,6 +243,16 @@ fn hub_skill_install(
 }
 
 #[tauri::command]
+fn hub_skills_sources() -> Vec<hub::SkillSource> {
+    hub::skills_sources()
+}
+
+#[tauri::command]
+fn hub_skill_sync(slug: String) -> Result<String, String> {
+    hub::skill_sync(&slug)
+}
+
+#[tauri::command]
 fn hub_skills_dir() -> String {
     hub::skills_dir_path()
 }
@@ -250,6 +260,11 @@ fn hub_skills_dir() -> String {
 #[tauri::command]
 fn mcp_save(config: serde_json::Value) -> Result<(), String> {
     mcp::save_config(config)
+}
+
+#[tauri::command]
+fn mcp_status(cwd: Option<String>) -> Result<Vec<mcp::McpServerStatus>, String> {
+    mcp::status(cwd)
 }
 
 #[tauri::command]
@@ -316,16 +331,32 @@ fn install_panic_log() {
             })
             .join("pi-desktop");
         let _ = std::fs::create_dir_all(&base);
-        if let Ok(mut f) = std::fs::OpenOptions::new()
+        let Ok(mut f) = std::fs::OpenOptions::new()
             .create(true)
             .append(true)
             .open(base.join("crash.log"))
-        {
-            let stamp = std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .map(|d| d.as_secs())
-                .unwrap_or(0);
-            let _ = writeln!(f, "[{stamp}] {info}");
+        else {
+            return;
+        };
+        let stamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_secs())
+            .unwrap_or(0);
+        let thread = std::thread::current();
+        let _ = writeln!(
+            f,
+            "\n=== panic {stamp} | {} {} ({}) | thread {}",
+            option_env!("PI_CHANNEL").unwrap_or("dev"),
+            env!("CARGO_PKG_VERSION"),
+            option_env!("PI_COMMIT").unwrap_or("?"),
+            thread.name().unwrap_or("unnamed")
+        );
+        let _ = writeln!(f, "{info}");
+        if std::env::var("RUST_BACKTRACE").is_ok() {
+            let bt = std::backtrace::Backtrace::force_capture();
+            let _ = writeln!(f, "{bt}");
+        } else {
+            let _ = writeln!(f, "(set RUST_BACKTRACE=1 for a backtrace)");
         }
     }));
 }
@@ -387,6 +418,7 @@ pub fn run() {
             mcp_servers,
             mcp_save,
             mcp_check,
+            mcp_status,
             browser_enable,
             browser_disable,
             browser_preview,
@@ -395,6 +427,8 @@ pub fn run() {
             hub_skills_in_repo,
             hub_skill_install,
             hub_skills_dir,
+            hub_skills_sources,
+            hub_skill_sync,
             attachment_read,
             attachment_stage,
             attachment_save_b64,

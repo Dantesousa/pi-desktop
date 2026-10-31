@@ -47,8 +47,8 @@ pub fn save_config(config: serde_json::Value) -> Result<(), String> {
     }
     let pretty = serde_json::to_string_pretty(&config).map_err(|e| e.to_string())?;
     let tmp = path.with_extension("json.tmp");
-    fs::write(&tmp, pretty).map_err(|e| format!("falha ao escrever mcp.json: {e}"))?;
-    fs::rename(&tmp, &path).map_err(|e| format!("falha ao salvar mcp.json: {e}"))?;
+    fs::write(&tmp, pretty).map_err(|e| format!("failed to write mcp.json: {e}"))?;
+    fs::rename(&tmp, &path).map_err(|e| format!("failed to save mcp.json: {e}"))?;
     Ok(())
 }
 
@@ -121,7 +121,7 @@ pub fn check(cwd: Option<String>) -> Result<String, String> {
     }
     let output = cmd
         .output()
-        .map_err(|e| format!("falha ao rodar `pi mcp list`: {e}"))?;
+        .map_err(|e| format!("failed to run `pi mcp list`: {e}"))?;
     let mut text = String::from_utf8_lossy(&output.stdout).to_string();
     let err = String::from_utf8_lossy(&output.stderr).to_string();
     if text.trim().is_empty() {
@@ -214,7 +214,7 @@ pub fn browser_enable() -> Result<String, String> {
         "args": [script.to_string_lossy()],
         "cwd": cwd,
         "env": node_modules.map(|n| serde_json::json!({ "NODE_PATH": n })).unwrap_or_else(|| serde_json::json!({})),
-        "description": "Navegador controlado pelo agente; o app mostra o preview ao vivo",
+        "description": "Agent-controlled browser; the app shows a live preview",
     });
     save_config(config)?;
     Ok(script.to_string_lossy().into_owned())
@@ -272,4 +272,59 @@ pub fn browser_preview(with_image: bool) -> BrowserPreview {
         }
     }
     out
+}
+
+#[derive(Serialize, Clone)]
+pub struct McpServerStatus {
+    pub name: String,
+    pub enabled: bool,
+    pub state: String,
+    pub transport: String,
+    pub tools: Vec<String>,
+    pub error: Option<String>,
+}
+
+/// Runs `pi mcp list --json` and returns per-server state + tools.
+pub fn status(cwd: Option<String>) -> Result<Vec<McpServerStatus>, String> {
+    let raw = check(cwd)?;
+    let json: serde_json::Value =
+        serde_json::from_str(&raw).map_err(|e| format!("resposta inesperada: {e}"))?;
+    let mut out = Vec::new();
+    for item in json
+        .get("servers")
+        .and_then(|v| v.as_array())
+        .cloned()
+        .unwrap_or_default()
+    {
+        out.push(McpServerStatus {
+            name: item.get("name").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+            enabled: item.get("enabled").and_then(|v| v.as_bool()).unwrap_or(true),
+            state: item.get("state").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+            transport: item
+                .get("transport")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string(),
+            tools: item
+                .get("tools")
+                .and_then(|v| v.as_array())
+                .map(|a| {
+                    a.iter()
+                        .filter_map(|t| {
+                            t.get("name")
+                                .and_then(|n| n.as_str())
+                                .map(str::to_string)
+                                .or_else(|| t.as_str().map(str::to_string))
+                        })
+                        .collect()
+                })
+                .unwrap_or_default(),
+            error: item
+                .get("error")
+                .and_then(|v| v.as_str())
+                .filter(|s| !s.is_empty())
+                .map(str::to_string),
+        });
+    }
+    Ok(out)
 }

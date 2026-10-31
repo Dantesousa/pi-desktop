@@ -239,7 +239,7 @@ export class Tab {
   }
 }
 
-class AppState {
+class HinaState {
   tabs = $state<Tab[]>([]);
   activeId = $state("");
   chips = $state<Chip[]>([]);
@@ -255,6 +255,8 @@ class AppState {
   pinned = $state<string[]>(JSON.parse(localStorage.getItem("pi.pinned") || "[]"));
   showMemory = $state(false);
   showPalette = $state(false);
+  modelFaves = $state<string[]>(JSON.parse(localStorage.getItem("pi.modelFaves") || "[]"));
+  modelHidden = $state<string[]>(JSON.parse(localStorage.getItem("pi.modelHidden") || "[]"));
   showBash = $state(false);
   showBrowser = $state(false);
   browser = $state<{
@@ -297,6 +299,44 @@ class AppState {
   }
   get models() {
     return this.active?.models ?? [];
+  }
+
+  static modelKey(m: { provider: string; id: string }) {
+    return `${m.provider}/${m.id}`;
+  }
+
+  isFave(m: { provider: string; id: string }) {
+    return this.modelFaves.includes(HinaState.modelKey(m));
+  }
+
+  isHidden(m: { provider: string; id: string }) {
+    return this.modelHidden.includes(HinaState.modelKey(m));
+  }
+
+  /** Models the pickers show: hidden removed, favourites first. */
+  get visibleModels() {
+    const list = this.models.filter((m) => !this.isHidden(m));
+    return [...list].sort((a, b) => Number(this.isFave(b)) - Number(this.isFave(a)));
+  }
+
+  toggleFave(m: { provider: string; id: string }) {
+    const key = HinaState.modelKey(m);
+    this.modelFaves = this.modelFaves.includes(key)
+      ? this.modelFaves.filter((k) => k !== key)
+      : [...this.modelFaves, key];
+    localStorage.setItem("pi.modelFaves", JSON.stringify(this.modelFaves));
+  }
+
+  toggleHidden(m: { provider: string; id: string }) {
+    const key = HinaState.modelKey(m);
+    this.modelHidden = this.modelHidden.includes(key)
+      ? this.modelHidden.filter((k) => k !== key)
+      : [...this.modelHidden, key];
+    localStorage.setItem("pi.modelHidden", JSON.stringify(this.modelHidden));
+    if (this.modelHidden.includes(key) && this.model && HinaState.modelKey(this.model) === key) {
+      const next = this.visibleModels[0];
+      if (next) void this.setModel(next.provider, next.id);
+    }
   }
   get commands() {
     return this.active?.commands ?? [];
@@ -507,6 +547,7 @@ class AppState {
         thinking: tab.thinking,
         session: opts.session,
         noSession: false,
+        gate: this.gateMode,
       });
       tab.conn = "ready";
       const st = await this.procStatus(tab.id);
@@ -647,6 +688,16 @@ class AppState {
     tab.currentKey = null;
     await this.connect({ cwd: path, tab });
     await this.loadSessions();
+  }
+
+  get yolo() {
+    return this.gateMode === "off";
+  }
+
+  /** YOLO: every tool call runs without asking. */
+  async setYolo(on: boolean) {
+    await this.setGate(on ? "off" : "dangerous");
+    this.toast(on ? t("toast.yoloOn") : t("toast.yoloOff"), on ? "warn" : "ok");
   }
 
   async setGate(mode: string) {
@@ -1336,6 +1387,16 @@ class AppState {
   // ── model / thinking cycling ───────────────────────────────────────────
   async cycleModel() {
     const tab = this.active;
+    // cycle through what the picker shows (favourites first, hidden excluded)
+    const visible = this.visibleModels;
+    if (visible.length > 1) {
+      const current = this.model ? HinaState.modelKey(this.model) : "";
+      const idx = visible.findIndex((m) => HinaState.modelKey(m) === current);
+      const next = visible[(idx + 1) % visible.length];
+      await this.setModel(next.provider, next.id);
+      this.toast(t("toast.modelChanged", { name: next.name ?? next.id }), "ok");
+      return;
+    }
     try {
       const data = await this.send(tab.id, { type: "cycle_model" });
       if (!data?.model) {
@@ -1918,4 +1979,4 @@ export function fmtSize(n: number): string {
   return `${(n / 1024 / 1024).toFixed(1)} MB`;
 }
 
-export const app = new AppState();
+export const app = new HinaState();

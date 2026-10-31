@@ -9,7 +9,7 @@ let dispatched = null;
 await page.evaluate(() => {
   document.addEventListener("hina:open-link", (e) => { window.__lastLink = e.detail; });
   const d = document.createElement("div");
-  d.innerHTML = '<a id="tlink" href="https://example.com/">link de teste</a>';
+  d.innerHTML = '<a id="tlink" href="https://example.com/">test link</a>';
   document.body.appendChild(d);
 });
 await page.click("#tlink");

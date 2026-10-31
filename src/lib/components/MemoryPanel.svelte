@@ -41,6 +41,9 @@
   let repoResults = $state<any[]>([]);
   let repoSkills = $state<any[]>([]);
   let activeRepo = $state<string | null>(null);
+  let mcpStatuses = $state<any[]>([]);
+  let skillSources = $state<any[]>([]);
+  let openTools = $state<string | null>(null);
   let newName = $state("");
   let newCommand = $state("");
   let newUrl = $state("");
@@ -62,12 +65,14 @@
       if (tab === "skills") {
         file = null;
         skills = await api.skillsList();
+        skillSources = await api.hubSkillsSources();
         return;
       }
       if (tab === "mcp") {
         file = null;
         mcpRaw = await api.mcpConfig();
         mcpServers = await api.mcpServers();
+        await refreshStatuses();
         return;
       }
       file = await api.memoryRead(tab);
@@ -252,15 +257,46 @@
     newUrl = "";
   }
 
+  async function refreshStatuses() {
+    try {
+      mcpStatuses = await api.mcpStatus(app.cwd);
+    } catch {
+      mcpStatuses = [];
+    }
+  }
+
+  function statusFor(name: string) {
+    return mcpStatuses.find((s) => s.name === name);
+  }
+
   async function checkMcp() {
     mcpBusy = true;
     mcpOutput = null;
     try {
+      await refreshStatuses();
       mcpOutput = await api.mcpCheck(app.cwd);
     } catch (e: any) {
       mcpOutput = String(e?.message ?? e);
     } finally {
       mcpBusy = false;
+    }
+  }
+
+  function sourceFor(skill: any) {
+    return skillSources.find((s) => s.slug === skill.name);
+  }
+
+  async function syncSkill(skill: any) {
+    hubBusy = true;
+    try {
+      const msg = await api.hubSkillSync(skill.name);
+      app.toast(`${skill.name}: ${msg}`, "ok");
+      skills = await api.skillsList();
+      skillSources = await api.hubSkillsSources();
+    } catch (e: any) {
+      app.toast(`sync falhou: ${e?.message ?? e}`, "error");
+    } finally {
+      hubBusy = false;
     }
   }
 
@@ -501,6 +537,7 @@
     {:else}
     <div class="entries">
       {#each mcpServers as srv}
+        {@const st = statusFor(srv.name)}
         <div class="entry">
           <div class="ehead">
             <span class="cat">{srv.kind}</span>
@@ -512,6 +549,25 @@
             <button class="mini danger" onclick={() => removeServer(srv.name)}>×</button>
           </div>
           <div class="faint small mono">{srv.target}</div>
+          {#if st}
+            <div class="toolsrow">
+              {#if st.error}
+                <span class="err small">{st.error.slice(0, 90)}</span>
+              {:else}
+                <button class="mini" onclick={() => (openTools = openTools === srv.name ? null : srv.name)}>
+                  {st.tools.length} tools {openTools === srv.name ? "▾" : "▸"}
+                </button>
+                <span class="faint small">{st.state}</span>
+              {/if}
+            </div>
+            {#if openTools === srv.name && st.tools.length}
+              <div class="toollist">
+                {#each st.tools as tool}
+                  <code>{tool}</code>
+                {/each}
+              </div>
+            {/if}
+          {/if}
           {#if srv.description}<div class="faint small">{srv.description}</div>{/if}
         </div>
       {:else}
@@ -623,14 +679,23 @@
       </div>
       <div class="entries">
         {#each skills as s}
-          <button class="entry skill" onclick={() => openSkill(s)}>
+          {@const src = sourceFor(s)}
+          <div class="entry skill">
             <div class="ehead">
               <span class="cat">{s.scope}</span>
+              {#if src}<span class="faint small mono">{src.repo}</span>{/if}
               <span class="spacer"></span>
+              {#if src}
+                <button class="mini" title={t("mem.syncSkill")} onclick={() => syncSkill(s)} disabled={hubBusy}>
+                  ⟳
+                </button>
+              {/if}
             </div>
-            <div class="body"><strong>{s.name}</strong></div>
-            <div class="faint small">{s.description}</div>
-          </button>
+            <button class="linkish" onclick={() => openSkill(s)}>
+              <div class="body"><strong>{s.name}</strong></div>
+              <div class="faint small">{s.description}</div>
+            </button>
+          </div>
         {:else}
           <div class="empty">{t("mem.skillsNone")}</div>
         {/each}
@@ -727,6 +792,37 @@
   .mini {
     font-size: 10.5px;
     padding: 3px 8px;
+  }
+  .linkish {
+    border: none;
+    background: none;
+    padding: 0;
+    text-align: left;
+    width: 100%;
+    border-radius: 6px;
+  }
+  .linkish:hover {
+    background: none;
+  }
+  .toolsrow {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 4px;
+  }
+  .toollist {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 5px;
+  }
+  .toollist code {
+    font-size: 9.5px;
+    background: var(--code-bg-2);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 0 5px;
+    color: var(--text-dim);
   }
   .mini.sel {
     background: var(--panel-2);
@@ -880,7 +976,6 @@
     color: #b8c4da;
     margin: 6px 0 0;
   }
-  .skillbody,
   .skilledit {
     flex: 1;
     overflow: auto;

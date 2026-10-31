@@ -79,6 +79,8 @@ const en = {
   "msg.newFile": "(new file)",
   "tool.args": "arguments",
   "tool.result": "result",
+  "tool.images": "{n} image(s)",
+  "tool.imageN": "result {n}",
   "tool.all": "all",
   "tool.collapse": "collapse",
   "tool.images": "images ({n})",
@@ -131,6 +133,11 @@ const en = {
   "top.updating": "updating…",
   "top.bin": "bin",
   "top.language": "language",
+  "top.models": "models",
+  "top.modelsFilter": "filter models…",
+  "top.favorite": "favorite (pinned on top)",
+  "top.showModel": "show in the picker",
+  "top.hideModel": "hide from the picker",
   "top.projectLabel": "project",
 
   // palette
@@ -154,6 +161,11 @@ const en = {
   "palette.project": "Switch project (cwd)…",
   "palette.sync": "Sync memory index",
   "palette.cycleModel": "Model: next",
+  "palette.faveModel": "Model: add current to favourites",
+  "palette.yoloOn": "YOLO mode: on",
+  "palette.yoloOff": "YOLO mode: off",
+  "palette.unfaveModel": "Model: remove current from favourites",
+  "palette.hideModel": "Model: hide current from the picker",
   "palette.cycleThinking": "Thinking: next level",
   "palette.clone": "Clone session",
   "palette.fork": "Resume from a message (fork)…",
@@ -177,6 +189,8 @@ const en = {
   // page banners
   "page.externalChange": "🔄 this session changed on disk (another process wrote to it)",
   "page.reload": "reload (F5)",
+  "page.yolo": "YOLO mode: every tool call runs without asking",
+  "page.yoloOff": "turn off",
   "page.costWarn": "💸 this session cost (${cost}) passed the limit of ${limit}",
   "page.tipDrop": "drop files",
   "page.tipPaste": "paste images",
@@ -219,6 +233,7 @@ const en = {
   "mem.repos": "← repos",
   "mem.back": "← back",
   "mem.install": "install",
+  "mem.syncSkill": "re-download from the source repo",
   "mem.skillsSearch": "search skills on GitHub…",
   "mem.skillsSearchEmpty": "search for a repository with skills",
   "mem.noRepo": "no repository found",
@@ -346,6 +361,8 @@ const en = {
   "toast.extension": "extension: {error}",
   "toast.openedInNewTab": "opened in a new tab so the running turn keeps going",
   "toast.alreadyOpen": "that session is already open in another tab",
+  "toast.yoloOn": "YOLO mode on — no tool will ask for permission",
+  "toast.yoloOff": "permission prompts restored",
   "toast.resumed": "resumed the most recent session",
 };
 
@@ -412,6 +429,9 @@ const ptBR: Record<keyof typeof en, string> = {
   "msg.newFile": "(arquivo novo)",
   "tool.args": "argumentos",
   "tool.result": "resultado",
+  "tool.images": "{n} imagem(ns)",
+  "tool.imageN": "resultado {n}",
+
   "tool.all": "tudo",
   "tool.collapse": "recolher",
   "tool.images": "imagens ({n})",
@@ -463,6 +483,12 @@ const ptBR: Record<keyof typeof en, string> = {
   "top.updating": "atualizando…",
   "top.bin": "bin",
   "top.language": "idioma",
+  "top.models": "modelos",
+  "top.modelsFilter": "filtrar modelos…",
+  "top.favorite": "favoritar (fica no topo)",
+  "top.showModel": "mostrar no seletor",
+  "top.hideModel": "ocultar do seletor",
+
   "top.projectLabel": "Projeto",
 
   "palette.placeholder": "comando, modelo, sessão, skill…",
@@ -485,6 +511,13 @@ const ptBR: Record<keyof typeof en, string> = {
   "palette.project": "Trocar projeto (cwd)…",
   "palette.sync": "Sincronizar índice de memória",
   "palette.cycleModel": "Modelo: próximo",
+  "palette.faveModel": "Modelo: favoritar o atual",
+  "palette.yoloOn": "Modo YOLO: ligar",
+  "palette.yoloOff": "Modo YOLO: desligar",
+
+  "palette.unfaveModel": "Modelo: tirar o atual dos favoritos",
+  "palette.hideModel": "Modelo: ocultar o atual do seletor",
+
   "palette.cycleThinking": "Thinking: próximo nível",
   "palette.clone": "Clonar sessão",
   "palette.fork": "Retomar de uma mensagem (fork)…",
@@ -507,6 +540,9 @@ const ptBR: Record<keyof typeof en, string> = {
 
   "page.externalChange": "🔄 esta sessão mudou no disco (outro processo escreveu nela)",
   "page.reload": "recarregar (F5)",
+  "page.yolo": "modo YOLO: toda ferramenta roda sem pedir permissão",
+  "page.yoloOff": "desligar",
+
   "page.costWarn": "💸 custo desta sessão (${cost}) passou do limite de ${limit}",
   "page.tipDrop": "arraste arquivos",
   "page.tipPaste": "cole imagens",
@@ -548,6 +584,8 @@ const ptBR: Record<keyof typeof en, string> = {
   "mem.repos": "← repos",
   "mem.back": "← voltar",
   "mem.install": "instalar",
+  "mem.syncSkill": "baixar de novo do repositório de origem",
+
   "mem.skillsSearch": "buscar skills no GitHub…",
   "mem.skillsSearchEmpty": "busque um repositório com skills",
   "mem.noRepo": "nenhum repositório encontrado",
@@ -671,6 +709,8 @@ const ptBR: Record<keyof typeof en, string> = {
   "toast.extension": "extensão: {error}",
   "toast.openedInNewTab": "aberto numa aba nova para não interromper o turno em andamento",
   "toast.alreadyOpen": "essa sessão já está aberta em outra aba",
+  "toast.yoloOn": "modo YOLO ligado — nenhuma ferramenta vai pedir permissão",
+  "toast.yoloOff": "permissões voltaram a ser pedidas",
   "toast.resumed": "retomei a sessão mais recente",
 };
 

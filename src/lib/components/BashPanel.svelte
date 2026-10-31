@@ -2,6 +2,7 @@
   import { t } from "../i18n.svelte";
   import { app } from "../store.svelte";
 
+  let overlayEl = $state<HTMLElement | null>(null);
   let command = $state("");
   let exclude = $state(false);
   let out = $state<HTMLElement | null>(null);
@@ -40,10 +41,13 @@
   onkeydown={(e) => {
     if (e.key === "Escape" && app.showBash) app.showBash = false;
   }}
+  onclick={(e) => {
+    if (e.target === overlayEl) app.showBash = false;
+  }}
 />
 
 {#if app.showBash}
-  <div class="overlay" onclick={(e) => e.target === e.currentTarget && (app.showBash = false)}>
+  <div class="overlay" bind:this={overlayEl} role="presentation">
     <div class="box" role="dialog" aria-modal="true" tabindex="-1">
       <div class="head">
         <strong>bash</strong>

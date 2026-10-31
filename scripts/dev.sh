@@ -17,7 +17,7 @@ if [ -n "${LD_LIBRARY_PATH:-}" ]; then
 fi
 
 if ss -ltn 2>/dev/null | grep -q ":$PORT "; then
-  echo "porta $PORT ocupada — limpando processo órfão…"
+  echo "port $PORT is busy — clearing the orphan process…"
   if command -v fuser >/dev/null; then
     fuser -k "${PORT}/tcp" 2>/dev/null || true
   else

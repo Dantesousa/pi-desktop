@@ -22,6 +22,12 @@
     app.respond(req, payload);
   }
 
+  let overlayEl = $state<HTMLElement | null>(null);
+
+  function onBackdrop(e: MouseEvent) {
+    if (e.target === overlayEl) answer({ cancelled: true });
+  }
+
   function onKey(e: KeyboardEvent) {
     if (e.key === "Escape") {
       e.preventDefault();
@@ -30,8 +36,14 @@
   }
 </script>
 
+<svelte:window
+  onclick={(e) => {
+    if (req && e.target === overlayEl) answer({ cancelled: true });
+  }}
+/>
+
 {#if req}
-  <div class="overlay" onclick={(e) => e.target === e.currentTarget && answer({ cancelled: true })}>
+  <div class="overlay" bind:this={overlayEl} role="presentation">
     <div class="modal" role="dialog" tabindex="-1" onkeydown={onKey}>
       <div class="title">{req.title ?? t("dialog.confirmation")}</div>
       {#if req.message}

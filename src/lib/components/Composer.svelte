@@ -60,6 +60,17 @@
 
   async function send() {
     if (!text.trim() && app.chips.length === 0) return;
+    const cmd = text.trim().toLowerCase();
+    if (cmd === "/yolo" || cmd === "/yolo on") {
+      text = "";
+      await app.setYolo(true);
+      return;
+    }
+    if (cmd === "/safe" || cmd === "/yolo off") {
+      text = "";
+      await app.setYolo(false);
+      return;
+    }
     const payload = text;
     const chips = [...app.chips];
     text = "";

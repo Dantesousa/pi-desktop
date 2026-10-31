@@ -63,6 +63,7 @@ export const api = {
   mcpServers: async () => camel(await invoke<any[]>("mcp_servers")),
   mcpSave: (config: any) => invoke<void>("mcp_save", { config }),
   mcpCheck: (cwd: string | null) => invoke<string>("mcp_check", { cwd }),
+  mcpStatus: async (cwd: string | null) => camel(await invoke<any[]>("mcp_status", { cwd })),
 
   // hubs
   browserEnable: () => invoke<string>("browser_enable"),
@@ -78,6 +79,8 @@ export const api = {
   hubSkillInstall: (repo: string, dir: string, rename?: string) =>
     invoke<string>("hub_skill_install", { repo, dir, rename: rename ?? null }),
   hubSkillsDir: () => invoke<string>("hub_skills_dir"),
+  hubSkillsSources: async () => camel(await invoke<any[]>("hub_skills_sources")),
+  hubSkillSync: (slug: string) => invoke<string>("hub_skill_sync", { slug }),
 
   // attachments
   attachmentRead: async (path: string) => camel(await invoke<any>("attachment_read", { path })),

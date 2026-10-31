@@ -51,17 +51,17 @@
           app.setTheme(THEMES[(i + 1) % THEMES.length].id);
         },
       },
-      ...LOCALES.map((l) => ({
-        id: `locale:${l.id}`,
-        label: `Language: ${l.label}`,
+      ...LOCALES.map((loc) => ({
+        id: `locale:${loc.id}`,
+        label: `Language: ${loc.label}`,
         group: t("palette.action"),
-        run: () => setLocale(l.id),
+        run: () => setLocale(loc.id),
       })),
-      ...THEMES.map((t) => ({
-        id: `theme:${t.id}`,
-        label: t("palette.themePrefix", { name: t.name }),
+      ...THEMES.map((theme) => ({
+        id: `theme:${theme.id}`,
+        label: t("palette.themePrefix", { name: theme.name }),
         group: t("palette.theme"),
-        run: () => app.setTheme(t.id),
+        run: () => app.setTheme(theme.id),
       })),
       {
         id: "project",
@@ -182,10 +182,21 @@
     }
   }
 
+  let overlayEl = $state<HTMLElement | null>(null);
+
+  function closeOverlay() {
+    app.showPalette = false;
+  }
 </script>
 
+<svelte:window
+  onclick={(e) => {
+    if (app.showPalette && overlayEl && e.target === overlayEl) closeOverlay();
+  }}
+/>
+
 {#if app.showPalette}
-  <div class="overlay" onclick={(e) => e.target === e.currentTarget && (app.showPalette = false)}>
+<div class="overlay" bind:this={overlayEl}>
     <div class="palette">
       <input bind:this={input} bind:value={query} placeholder={t("palette.placeholder")} onkeydown={onKey} />
       <div class="list">

@@ -4,7 +4,7 @@
 
 use serde::Serialize;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
 fn curl(url: &str) -> Result<String, String> {
@@ -387,7 +387,7 @@ pub fn skill_install(repo: &str, dir: &str, rename: Option<String>) -> Result<St
         if let Some(parent) = target.parent() {
             fs::create_dir_all(parent).ok();
         }
-        fs::write(&target, body).map_err(|e| format!("falha ao gravar {rel}: {e}"))?;
+        fs::write(&target, body).map_err(|e| format!("failed to write {rel}: {e}"))?;
         written += 1;
     }
     if written == 0 {
@@ -428,7 +428,7 @@ mod tests {
     #[ignore = "rede"]
     fn github_skill_repos_and_dirs() {
         let repos = skills_search("", 5).expect("busca ok");
-        assert!(!repos.is_empty(), "esperava repos com SKILL.md");
+        assert!(!repos.is_empty(), "expected repositories with SKILL.md");
         assert!(repos[0].hits >= 1);
         let dirs = skills_in_repo(&repos[0].full_name).expect("code search ok");
         println!("repo {} ({} hits) → {} skills", repos[0].full_name, repos[0].hits, dirs.len());
@@ -441,5 +441,137 @@ mod tests {
         assert!(root.ends_with("skills"));
         let fake = Path::new("/etc/passwd");
         assert!(!fake.starts_with(&root));
+    }
+}
+
+// ── skill provenance / updates ───────────────────────────────────────────────
+
+fn fnv1a(bytes: &[u8]) -> String {
+    let mut h: u64 = 0xcbf29ce484222325;
+    for b in bytes {
+        h ^= *b as u64;
+        h = h.wrapping_mul(0x100000001b3);
+    }
+    format!("{h:016x}")
+}
+
+#[derive(Serialize, Clone)]
+pub struct SkillSource {
+    pub slug: String,
+    pub repo: String,
+    pub dir: String,
+    pub installed_at: String,
+    pub files: usize,
+}
+
+fn source_path(slug: &str) -> PathBuf {
+    skills_root().join(slug).join(".source.json")
+}
+
+fn read_source(slug: &str) -> Option<serde_json::Value> {
+    fs::read_to_string(source_path(slug))
+        .ok()
+        .and_then(|s| serde_json::from_str(&s).ok())
+}
+
+fn write_source(slug: &str, repo: &str, dir: &str, files: &[(String, String)]) -> Result<(), String> {
+    let payload = serde_json::json!({
+        "repo": repo,
+        "dir": dir,
+        "installedAt": crate::memory::now_iso(),
+        "files": files.iter().map(|(p, h)| serde_json::json!({ "path": p, "hash": h })).collect::<Vec<_>>(),
+    });
+    fs::write(
+        source_path(slug),
+        serde_json::to_string_pretty(&payload).map_err(|e| e.to_string())?,
+    )
+    .map_err(|e| format!("failed to write .source.json: {e}"))
+}
+
+pub fn skills_sources() -> Vec<SkillSource> {
+    let mut out = Vec::new();
+    let Ok(dirs) = fs::read_dir(skills_root()) else {
+        return out;
+    };
+    for entry in dirs.flatten() {
+        let slug = entry.file_name().to_string_lossy().into_owned();
+        let Some(src) = read_source(&slug) else { continue };
+        out.push(SkillSource {
+            slug,
+            repo: src.get("repo").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+            dir: src.get("dir").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+            installed_at: src
+                .get("installedAt")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string(),
+            files: src
+                .get("files")
+                .and_then(|v| v.as_array())
+                .map(|a| a.len())
+                .unwrap_or(0),
+        });
+    }
+    out.sort_by(|a, b| a.slug.cmp(&b.slug));
+    out
+}
+
+/// Re-downloads a skill from its recorded source and reports what changed.
+pub fn skill_sync(slug: &str) -> Result<String, String> {
+    let src = read_source(slug).ok_or_else(|| "this skill did not come from a hub (no .source.json)".to_string())?;
+    let repo = src.get("repo").and_then(|v| v.as_str()).unwrap_or("");
+    let dir = src.get("dir").and_then(|v| v.as_str()).unwrap_or("");
+    if repo.is_empty() {
+        return Err("origem desconhecida".into());
+    }
+    let before: Vec<(String, String)> = src
+        .get("files")
+        .and_then(|v| v.as_array())
+        .map(|a| {
+            a.iter()
+                .filter_map(|f| {
+                    Some((
+                        f.get("path")?.as_str()?.to_string(),
+                        f.get("hash")?.as_str()?.to_string(),
+                    ))
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+
+    // re-instala em cima e coleta os hashes atuais
+    let dest = skill_install(repo, dir, Some(slug.to_string()))?;
+    let mut now: Vec<(String, String)> = Vec::new();
+    let dest_path = PathBuf::from(&dest);
+    fn walk(dir: &Path, base: &Path, out: &mut Vec<(String, String)>) {
+        let Ok(entries) = fs::read_dir(dir) else { return };
+        for e in entries.flatten() {
+            let p = e.path();
+            if p.is_dir() {
+                walk(&p, base, out);
+            } else if p.file_name().and_then(|n| n.to_str()) != Some(".source.json") {
+                if let Ok(bytes) = fs::read(&p) {
+                    if let Ok(rel) = p.strip_prefix(base) {
+                        out.push((rel.to_string_lossy().into_owned(), fnv1a(&bytes)));
+                    }
+                }
+            }
+        }
+    }
+    walk(&dest_path, &dest_path, &mut now);
+
+    let mut changed = 0;
+    for (path, hash) in &now {
+        match before.iter().find(|(p, _)| p == path) {
+            Some((_, old)) if old == hash => {}
+            _ => changed += 1,
+        }
+    }
+    write_source(slug, repo, dir, &now)?;
+
+    if changed == 0 {
+        Ok("already up to date".to_string())
+    } else {
+        Ok(format!("{changed} file(s) updated"))
     }
 }

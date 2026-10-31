@@ -207,8 +207,8 @@ pub fn write_target(target: &str, entries: Vec<String>) -> Result<MemoryFile, St
         content.push_str("\n§\n");
     }
     let tmp = path.with_extension("md.tmp");
-    fs::write(&tmp, &content).map_err(|e| format!("falha ao escrever: {e}"))?;
-    fs::rename(&tmp, &path).map_err(|e| format!("falha ao salvar: {e}"))?;
+    fs::write(&tmp, &content).map_err(|e| format!("failed to write: {e}"))?;
+    fs::rename(&tmp, &path).map_err(|e| format!("failed to save: {e}"))?;
     read_target(target)
 }
 
@@ -218,7 +218,7 @@ fn open_db() -> Result<Connection, String> {
         return Err(format!("database not found at {}", path.display()));
     }
     Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
-        .map_err(|e| format!("falha ao abrir banco: {e}"))
+        .map_err(|e| format!("failed to open the database: {e}"))
 }
 
 fn count(conn: &Connection, table: &str) -> usize {
@@ -566,6 +566,10 @@ fn civil_from_days(z: i64) -> (i64, u32, u32) {
     let d = (doy - (153 * mp + 2) / 5 + 1) as u32;
     let m = if mp < 10 { mp + 3 } else { mp - 9 } as u32;
     (if m <= 2 { y + 1 } else { y }, m, d)
+}
+
+pub fn now_iso() -> String {
+    iso_now()
 }
 
 fn iso_now() -> String {

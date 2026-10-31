@@ -7,6 +7,8 @@
   let open = $state(false);
   let outputEl = $state<HTMLElement | null>(null);
   let showAll = $state(false);
+  let zoomed = $state<string | null>(null);
+  let zoomEl = $state<HTMLElement | null>(null);
 
   const ICONS: Record<string, string> = {
     bash: "▸_",
@@ -68,6 +70,18 @@
   });
 </script>
 
+<svelte:window
+  onkeydown={(e) => {
+    if (zoomed && e.key === "Escape") zoomed = null;
+  }}
+/>
+
+{#if zoomed}
+  <div class="overlay" role="presentation" bind:this={zoomEl} onclick={() => (zoomed = null)}>
+    <img class="zoomed" src={zoomed} alt={t("tool.imageN", { n: 1 })} />
+  </div>
+{/if}
+
 <div class="tool" class:error={part.isError} class:running={part.running}>
   <button class="head" onclick={() => (open = !open)}>
     <span class="icon">{icon}</span>
@@ -121,11 +135,9 @@
         <div class="label">{t("tool.images", { n: part.images.length })}</div>
         <div class="thumbs">
           {#each part.images as img, i}
-            <img
-              src={`data:${img.mimeType};base64,${img.data}`}
-              alt={`resultado ${i + 1}`}
-              onclick={() => window.open(`data:${img.mimeType};base64,${img.data}`, "_blank")}
-            />
+            <button class="thumb" onclick={() => (zoomed = `data:${img.mimeType};base64,${img.data}`)}>
+              <img src={`data:${img.mimeType};base64,${img.data}`} alt={t("tool.imageN", { n: i + 1 })} />
+            </button>
           {/each}
         </div>
       {/if}
@@ -293,6 +305,36 @@
   .reverted {
     font-size: 10.5px;
     color: var(--text-faint);
+  }
+  .thumb {
+    padding: 0;
+    border: 1px solid var(--border);
+    background: none;
+    border-radius: 6px;
+    overflow: hidden;
+    cursor: zoom-in;
+  }
+  .thumb img {
+    display: block;
+    max-height: 84px;
+    max-width: 140px;
+    object-fit: cover;
+  }
+  .overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.82);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 120;
+    cursor: zoom-out;
+  }
+  .zoomed {
+    max-width: 92vw;
+    max-height: 92vh;
+    border-radius: 8px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
   }
   .diff {
     background: var(--code-bg);

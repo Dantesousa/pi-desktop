@@ -116,6 +116,12 @@
         <button class="mini" onclick={() => app.reloadSession()}>{t("page.reload")}</button>
       </div>
     {/if}
+    {#if app.yolo}
+      <div class="banner danger">
+        ⚡ {t("page.yolo")}
+        <button class="mini" onclick={() => app.setYolo(false)}>{t("page.yoloOff")}</button>
+      </div>
+    {/if}
     {#if app.costWarn}
       <div class="banner warn">
         {t("page.costWarn", { cost: app.cost.toFixed(2), limit: app.costLimit.toFixed(2) })}
@@ -180,6 +186,11 @@
     display: flex;
     gap: 10px;
     align-items: center;
+  }
+  .banner.danger {
+    background: #35171a;
+    border-bottom-color: #6b2a2f;
+    color: #ffb4ad;
   }
   .banner.info {
     background: #16202e;

@@ -6,6 +6,8 @@
   let forkmessages = $state<{ entryId: string; text: string }[]>([]);
   let tree = $state<{ tree: any[]; leafId: string | null } | null>(null);
   let busy = $state(false);
+  let forkEl = $state<HTMLElement | null>(null);
+  let treeEl = $state<HTMLElement | null>(null);
 
   $effect(() => {
     if (app.showFork) {
@@ -37,10 +39,14 @@
       app.showTree = false;
     }
   }}
+  onclick={(e) => {
+    if (e.target === forkEl) app.showFork = false;
+    if (e.target === treeEl) app.showTree = false;
+  }}
 />
 
 {#if app.showFork}
-  <div class="overlay" onclick={(e) => e.target === e.currentTarget && (app.showFork = false)}>
+  <div class="overlay" bind:this={forkEl} role="presentation">
     <div class="box" role="dialog" aria-modal="true" tabindex="-1">
       <div class="head">
         <strong>{t("tree.forkTitle")}</strong>
@@ -63,7 +69,7 @@
 {/if}
 
 {#if app.showTree}
-  <div class="overlay" onclick={(e) => e.target === e.currentTarget && (app.showTree = false)}>
+  <div class="overlay" bind:this={treeEl} role="presentation">
     <div class="box" role="dialog" aria-modal="true" tabindex="-1">
       <div class="head">
         <strong>{t("tree.title")}</strong>

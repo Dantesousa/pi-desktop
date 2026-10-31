@@ -21,7 +21,7 @@ pub struct FileSnapshot {
 pub fn snapshot(path: &str) -> Result<FileSnapshot, String> {
     let p = PathBuf::from(path);
     if !p.is_absolute() {
-        return Err("o caminho precisa ser absoluto".into());
+        return Err("the path must be absolute".into());
     }
     if !p.exists() {
         return Ok(FileSnapshot {
@@ -75,18 +75,18 @@ pub fn snapshot(path: &str) -> Result<FileSnapshot, String> {
 pub fn restore(path: &str, content: Option<String>) -> Result<(), String> {
     let p = PathBuf::from(path);
     if !p.is_absolute() {
-        return Err("o caminho precisa ser absoluto".into());
+        return Err("the path must be absolute".into());
     }
     match content {
         Some(text) => {
             if let Some(parent) = p.parent() {
                 fs::create_dir_all(parent).map_err(|e| e.to_string())?;
             }
-            fs::write(&p, text).map_err(|e| format!("falha ao restaurar: {e}"))
+            fs::write(&p, text).map_err(|e| format!("failed to restore: {e}"))
         }
         None => {
             if p.exists() {
-                fs::remove_file(&p).map_err(|e| format!("falha ao remover: {e}"))
+                fs::remove_file(&p).map_err(|e| format!("failed to remove: {e}"))
             } else {
                 Ok(())
             }
@@ -105,16 +105,16 @@ mod tests {
     #[test]
     fn snapshot_and_restore_existing_file() {
         let path = tmp("edit.txt");
-        fs::write(&path, "antes\n").unwrap();
+        fs::write(&path, "before\n").unwrap();
 
         let snap = snapshot(path.to_str().unwrap()).unwrap();
         assert!(snap.exists);
         assert!(snap.can_restore);
-        assert_eq!(snap.content.as_deref(), Some("antes\n"));
+        assert_eq!(snap.content.as_deref(), Some("before\n"));
 
-        fs::write(&path, "depois\n").unwrap();
+        fs::write(&path, "after\n").unwrap();
         restore(path.to_str().unwrap(), snap.content.clone()).unwrap();
-        assert_eq!(fs::read_to_string(&path).unwrap(), "antes\n");
+        assert_eq!(fs::read_to_string(&path).unwrap(), "before\n");
 
         let _ = fs::remove_file(&path);
     }

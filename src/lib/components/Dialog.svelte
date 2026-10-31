@@ -32,12 +32,22 @@
       accept();
     }
   }
+  let overlayEl = $state<HTMLElement | null>(null);
+
+  function closeOverlay() {
+    cancel();
+  }
 </script>
 
-<svelte:window onkeydown={onKey} />
+<svelte:window
+  onkeydown={onKey}
+  onclick={(e) => {
+    if (e.target === overlayEl) closeOverlay();
+  }}
+/>
 
 {#if d}
-  <div class="overlay" onclick={(e) => e.target === e.currentTarget && cancel()}>
+<div class="overlay" bind:this={overlayEl}>
     <div class="box" role="dialog" aria-modal="true" tabindex="-1">
       <div class="title">{d.title}</div>
       {#if d.message}
