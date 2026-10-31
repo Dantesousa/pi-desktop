@@ -294,7 +294,7 @@
       skills = await api.skillsList();
       skillSources = await api.hubSkillsSources();
     } catch (e: any) {
-      app.toast(`sync falhou: ${e?.message ?? e}`, "error");
+      app.toast(t("toast.syncFailed", { error: e?.message ?? e }), "error");
     } finally {
       hubBusy = false;
     }
@@ -331,7 +331,7 @@
         ? { url: c.url, description: c.description }
         : { command: c.command, args: c.args ?? [], description: c.description };
     });
-    app.toast(`"${name}" adicionado`, "ok");
+    app.toast(t("toast.added", { name }), "ok");
   }
 
   async function searchSkillsHub() {
@@ -370,7 +370,7 @@
       const dest = await api.hubSkillInstall(activeRepo, s.dir);
       await app.loadSkills();
       skills = app.skills;
-      app.toast(`skill instalada em ${dest}`, "ok");
+      app.toast(t("toast.skillInstalled", { path: dest }), "ok");
     } catch (e: any) {
       hubError = String(e?.message ?? e);
     } finally {
@@ -449,7 +449,7 @@
             {/if}
           </div>
         {:else}
-          <div class="empty">{loading ? "carregando…" : "vazio"}</div>
+          <div class="empty">{loading ? t("common.loading") : t("common.empty")}</div>
         {/each}
       </div>
     {/if}

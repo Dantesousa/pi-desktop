@@ -55,8 +55,8 @@
           {#each req.options ?? [] as opt}
             <button
               class="opt"
-              class:danger={/bloquear|negar|no|cancel/i.test(opt)}
-              class:primary={/permitir|allow|yes|sim/i.test(opt)}
+              class:danger={/bloquear|negar|\bblock\b|\bdeny\b|no|cancel|reject/i.test(opt)}
+              class:primary={/permitir|\ballow\b|^yes|\byes\b|\bsim\b|continue|approve/i.test(opt)}
               onclick={() => answer({ value: opt })}
             >
               {opt}

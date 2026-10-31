@@ -121,7 +121,7 @@ function extractText(result: any): string {
   const content = result.content ?? result;
   if (Array.isArray(content)) {
     return content
-      .map((c: any) => (c?.type === "text" ? c.text : c?.type === "image" ? "[imagem]" : ""))
+      .map((c: any) => (c?.type === "text" ? c.text : c?.type === "image" ? "[image]" : ""))
       .filter(Boolean)
       .join("\n");
   }
@@ -627,7 +627,7 @@ class HinaState {
   /** Sends the agent a ready-to-go browsing request. */
   askAgentToBrowse(instruction: string) {
     this.askAgent(
-      `Use as ferramentas mcp__${"hina-browser"}__* para ${instruction}\nAbra o navegador, navegue, tire screenshots e me mostre o resultado.`,
+      `Use the mcp__${"hina-browser"}__* tools to ${instruction}\nOpen the browser, navigate, take screenshots and show me the result.`,
     );
   }
 
@@ -800,7 +800,7 @@ class HinaState {
     clearTimeout(waiter.timer);
     this.waiting.delete(key);
     if (ok) waiter.resolve(data);
-    else waiter.reject(new Error(error ?? "comando falhou"));
+    else waiter.reject(new Error(error ?? "command failed"));
   }
 
   // ── prompt ────────────────────────────────────────────────────────────
@@ -821,10 +821,10 @@ class HinaState {
         inline.push(`${fence}${langFor(chip.name)}\n// ${chip.name}\n${chip.text}\n${fence}`);
       } else if (chip.kind === "binary") {
         inline.push(
-          `[anexo] ${chip.name} (${chip.mime}, ${fmtSize(chip.size)}) em ${chip.stagedPath ?? chip.name} — abra com suas ferramentas se precisar.`,
+          `[attachment] ${chip.name} (${chip.mime}, ${fmtSize(chip.size)}) at ${chip.stagedPath ?? chip.name} — open it with your tools if needed.`,
         );
       } else if (chip.kind === "image") {
-        inline.push(`[imagem anexada] ${chip.name}`);
+        inline.push(`[attached image] ${chip.name}`);
       }
     }
     if (inline.length) message = `${message}\n\n${inline.join("\n\n")}`;
@@ -843,12 +843,12 @@ class HinaState {
       tab.label = userText.replace(/\s+/g, " ").slice(0, 28);
     }
 
-    const command: any = { type: "prompt", message: message || "(anexo)" };
+    const command: any = { type: "prompt", message: message || "(attachment)" };
     if (images.length) command.images = images;
     if (tab.streaming || tab.working) command.streamingBehavior = this.sendBehavior;
     tab.streaming = true;
     tab.working = true;
-    tab.activity = "pensando…";
+    tab.activity = t("activity.thinking");
     tab.taskStartedAt = Date.now();
     try {
       await this.send(tab.id, command);
@@ -1702,7 +1702,7 @@ class HinaState {
       case "agent_start":
         tab.streaming = true;
         tab.working = true;
-        tab.activity = "pensando…";
+        tab.activity = t("activity.thinking");
         break;
 
       case "message_start": {
@@ -1731,19 +1731,19 @@ class HinaState {
         const ci = ev.contentIndex ?? 0;
         if (ev.type === "text_delta") {
           (tab.part(msg, ci, "text") as any).text += ev.delta ?? "";
-          tab.activity = "escrevendo…";
+          tab.activity = t("activity.writing");
         } else if (ev.type === "text_end") {
           (tab.part(msg, ci, "text") as any).text = ev.content ?? "";
         } else if (ev.type === "thinking_delta") {
           (tab.part(msg, ci, "thinking") as any).text += ev.delta ?? "";
-          tab.activity = "pensando…";
+          tab.activity = t("activity.thinking");
         } else if (ev.type === "thinking_end") {
           (tab.part(msg, ci, "thinking") as any).text = ev.content ?? "";
         } else if (ev.type === "toolcall_start") {
           const p: any = tab.part(msg, ci, "tool");
           p.id = ev.id ?? p.id;
           p.name = ev.toolName ?? p.name;
-          tab.activity = `preparando ${ev.toolName}…`;
+          tab.activity = t("activity.preparing", { tool: ev.toolName });
         } else if (ev.type === "toolcall_end" && ev.toolCall) {
           const p: any = tab.part(msg, ci, "tool");
           p.id = ev.toolCall.id;
@@ -1751,7 +1751,7 @@ class HinaState {
           p.args = ev.toolCall.arguments;
           this.captureSnapshot(p);
         } else if (ev.type === "error") {
-          msg.error = String(ev.error ?? ev.reason ?? "erro no stream");
+          msg.error = String(ev.error ?? ev.reason ?? "stream error");
         }
         break;
       }
@@ -1786,7 +1786,7 @@ class HinaState {
         });
         if (rebuilt.length) msg.parts = rebuilt;
         msg.streaming = false;
-        if (m.stopReason === "error") msg.error = m.errorMessage ?? "erro";
+        if (m.stopReason === "error") msg.error = m.errorMessage ?? "error";
         tab.currentKey = null;
         break;
       }
@@ -1811,7 +1811,7 @@ class HinaState {
           msg.parts.push(created);
           this.captureSnapshot(created);
         }
-        tab.activity = `executando ${rec.toolName}…`;
+        tab.activity = t("activity.running", { tool: rec.toolName });
         break;
       }
 
@@ -1833,7 +1833,7 @@ class HinaState {
           const imgs = extractImages(rec.result);
           if (imgs.length) p.images = imgs;
         }
-        tab.activity = "pensando…";
+        tab.activity = t("activity.thinking");
         break;
       }
 
@@ -1883,7 +1883,7 @@ class HinaState {
           newMsg({
             key: uid(),
             role: "system",
-            parts: [{ ci: 0, kind: "text", text: `compactando contexto (${rec.reason})…` }],
+            parts: [{ ci: 0, kind: "text", text: t("activity.compacting", { reason: rec.reason }) }],
             ts: Date.now(),
           }),
         );

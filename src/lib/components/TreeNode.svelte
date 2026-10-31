@@ -21,7 +21,7 @@
               .join(" ");
       return `${m.role ?? "?"}: ${text.replace(/\s+/g, " ").slice(0, 80)}`;
     }
-    if (e.type === "session_info") return `nome: ${e.name}`;
+    if (e.type === "session_info") return `name: ${e.name}`;
     if (e.type === "model_change") return t("tree.model", { name: e.modelId });
     if (e.type === "thinking_level_change") return `thinking: ${e.thinkingLevel}`;
     return e.type ?? "?";

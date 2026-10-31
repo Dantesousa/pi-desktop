@@ -160,7 +160,7 @@
       {/if}
       <span class="hint">
         {#if app.working}
-          <span class="work"><span class="pulse"></span>{app.activity ?? "trabalhando…"}</span>
+          <span class="work"><span class="pulse"></span>{app.activity ?? t("activity.working")}</span>
         {:else}
           {t("composer.hint")}
         {/if}

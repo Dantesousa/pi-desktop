@@ -22,7 +22,7 @@
     try {
       await app.runBash(command, exclude);
     } catch (e: any) {
-      app.toast(`bash falhou: ${e?.message ?? e}`, "error");
+      app.toast(t("toast.bashFailed", { error: e?.message ?? e }), "error");
     }
   }
 

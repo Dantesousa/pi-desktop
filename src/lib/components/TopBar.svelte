@@ -35,7 +35,7 @@
     updating = true;
     try {
       const out = await api.piSelfUpdate();
-      app.toast(`pi atualizado: ${out.split("\n").slice(-2).join(" ").slice(0, 160)}`, "ok");
+      app.toast(t("toast.piUpdated", { out: out.split("\n").slice(-2).join(" ").slice(0, 160) }), "ok");
       piVersion = await api.piVersion();
       await app.connect();
     } catch (e: any) {

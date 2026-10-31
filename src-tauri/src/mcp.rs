@@ -288,7 +288,7 @@ pub struct McpServerStatus {
 pub fn status(cwd: Option<String>) -> Result<Vec<McpServerStatus>, String> {
     let raw = check(cwd)?;
     let json: serde_json::Value =
-        serde_json::from_str(&raw).map_err(|e| format!("resposta inesperada: {e}"))?;
+        serde_json::from_str(&raw).map_err(|e| format!("unexpected response: {e}"))?;
     let mut out = Vec::new();
     for item in json
         .get("servers")

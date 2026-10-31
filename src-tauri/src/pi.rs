@@ -356,7 +356,7 @@ fn run_capture(bin: &str, args: &[&str]) -> Result<String, String> {
 
 pub fn current_version() -> String {
     let bin = resolve_bin();
-    run_capture(&bin, &["--version"]).unwrap_or_else(|_| "desconhecida".into())
+    run_capture(&bin, &["--version"]).unwrap_or_else(|_| "unknown".into())
 }
 
 fn latest_npm_version() -> Option<String> {

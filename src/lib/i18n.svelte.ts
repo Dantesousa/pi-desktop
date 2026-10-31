@@ -79,7 +79,6 @@ const en = {
   "msg.newFile": "(new file)",
   "tool.args": "arguments",
   "tool.result": "result",
-  "tool.images": "{n} image(s)",
   "tool.imageN": "result {n}",
   "tool.all": "all",
   "tool.collapse": "collapse",
@@ -364,6 +363,21 @@ const en = {
   "toast.yoloOn": "YOLO mode on — no tool will ask for permission",
   "toast.yoloOff": "permission prompts restored",
   "toast.resumed": "resumed the most recent session",
+
+  // activity + late additions
+  "activity.thinking": "thinking…",
+  "activity.writing": "writing…",
+  "activity.preparing": "preparing {tool}…",
+  "activity.running": "running {tool}…",
+  "activity.compacting": "compacting context ({reason})…",
+  "activity.working": "working…",
+  "time.now": "now",
+  "tool.truncated": "… (truncated)",
+  "tool.lines": "{n} lines",
+  "sidebar.messages": "{n} messages",
+  "toast.added": '"{name}" added',
+  "toast.skillInstalled": "skill installed at {path}",
+  "toast.piUpdated": "pi updated: {out}",
 };
 
 const ptBR: Record<keyof typeof en, string> = {
@@ -429,7 +443,6 @@ const ptBR: Record<keyof typeof en, string> = {
   "msg.newFile": "(arquivo novo)",
   "tool.args": "argumentos",
   "tool.result": "resultado",
-  "tool.images": "{n} imagem(ns)",
   "tool.imageN": "resultado {n}",
 
   "tool.all": "tudo",
@@ -712,6 +725,21 @@ const ptBR: Record<keyof typeof en, string> = {
   "toast.yoloOn": "modo YOLO ligado — nenhuma ferramenta vai pedir permissão",
   "toast.yoloOff": "permissões voltaram a ser pedidas",
   "toast.resumed": "retomei a sessão mais recente",
+
+  // activity + late additions
+  "activity.thinking": "pensando…",
+  "activity.writing": "escrevendo…",
+  "activity.preparing": "preparando {tool}…",
+  "activity.running": "executando {tool}…",
+  "activity.compacting": "compactando contexto ({reason})…",
+  "activity.working": "trabalhando…",
+  "time.now": "agora",
+  "tool.truncated": "… (truncado)",
+  "tool.lines": "{n} linhas",
+  "sidebar.messages": "{n} mensagens",
+  "toast.added": '"{name}" adicionado',
+  "toast.skillInstalled": "skill instalada em {path}",
+  "toast.piUpdated": "pi atualizado: {out}",
 };
 
 export const messages: Record<LocaleId, Record<string, string>> = {

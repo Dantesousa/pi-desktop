@@ -11,7 +11,7 @@ fn curl(url: &str) -> Result<String, String> {
     let out = Command::new("curl")
         .args(["-sS", "-L", "--max-time", "25", "-H", "Accept: application/json", url])
         .output()
-        .map_err(|e| format!("curl falhou: {e}"))?;
+        .map_err(|e| format!("curl failed: {e}"))?;
     if !out.status.success() {
         return Err(String::from_utf8_lossy(&out.stderr).trim().to_string());
     }
@@ -22,7 +22,7 @@ fn gh_api(path: &str) -> Result<String, String> {
     let out = Command::new("gh")
         .args(["api", path])
         .output()
-        .map_err(|e| format!("gh falhou: {e}"))?;
+        .map_err(|e| format!("gh failed: {e}"))?;
     if out.status.success() {
         return Ok(String::from_utf8_lossy(&out.stdout).into_owned());
     }
@@ -69,7 +69,7 @@ pub fn mcp_search(query: &str, limit: u32) -> Result<Vec<McpCandidate>, String> 
     };
     let body = curl(&url)?;
     let json: serde_json::Value = serde_json::from_str(&body)
-        .map_err(|e| format!("resposta inesperada do registro: {e}"))?;
+        .map_err(|e| format!("unexpected registry response: {e}"))?;
 
     let mut out: Vec<McpCandidate> = Vec::new();
     let mut seen = std::collections::HashSet::new();
@@ -223,7 +223,7 @@ pub fn skills_search(query: &str, limit: u32) -> Result<Vec<RepoCandidate>, Stri
     };
     let body = gh_api(&format!("search/code?q={q}&per_page=100"))?;
     let json: serde_json::Value =
-        serde_json::from_str(&body).map_err(|e| format!("resposta inesperada: {e}"))?;
+        serde_json::from_str(&body).map_err(|e| format!("unexpected response: {e}"))?;
 
     let mut repos: Vec<RepoCandidate> = Vec::new();
     for item in json.get("items").and_then(|v| v.as_array()).cloned().unwrap_or_default() {
@@ -267,7 +267,7 @@ pub fn skills_in_repo(repo: &str) -> Result<Vec<SkillCandidate>, String> {
         "search/code?q=filename:SKILL.md+repo:{repo}&per_page=100"
     ))?;
     let json: serde_json::Value =
-        serde_json::from_str(&body).map_err(|e| format!("resposta inesperada: {e}"))?;
+        serde_json::from_str(&body).map_err(|e| format!("unexpected response: {e}"))?;
 
     let mut dirs: Vec<String> = Vec::new();
     for item in json.get("items").and_then(|v| v.as_array()).cloned().unwrap_or_default() {
@@ -522,7 +522,7 @@ pub fn skill_sync(slug: &str) -> Result<String, String> {
     let repo = src.get("repo").and_then(|v| v.as_str()).unwrap_or("");
     let dir = src.get("dir").and_then(|v| v.as_str()).unwrap_or("");
     if repo.is_empty() {
-        return Err("origem desconhecida".into());
+        return Err("unknown source".into());
     }
     let before: Vec<(String, String)> = src
         .get("files")

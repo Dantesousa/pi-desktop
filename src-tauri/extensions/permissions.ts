@@ -52,10 +52,10 @@ export default function (pi: ExtensionAPI) {
       const command = String(input.command ?? "");
       const hit = DANGEROUS.find((p) => p.test(command));
       if (hit) {
-        reason = "comando potencialmente destrutivo";
+        reason = "potentially destructive command";
         detail = command;
       } else if (MODE === "all") {
-        reason = "bash (modo: aprovar tudo)";
+        reason = "bash (mode: approve all)";
         detail = command;
       }
     }
@@ -63,35 +63,35 @@ export default function (pi: ExtensionAPI) {
     if (!reason && WRITE_TOOLS.has(name) && MODE !== "all") {
       const target = String(input.path ?? input.file_path ?? "");
       if (target && outsideWorkspace(target, ctx.cwd ?? process.cwd())) {
-        reason = "escrita fora do workspace";
+        reason = "write outside the workspace";
         detail = target;
       }
     }
 
     if (!reason && WRITE_TOOLS.has(name) && MODE === "all") {
-      reason = "escrita (modo: aprovar tudo)";
+      reason = "write (mode: approve all)";
       detail = String(input.path ?? "");
     }
 
     if (!reason) return undefined;
 
     if (!ctx.hasUI) {
-      return { block: true, reason: `Bloqueado sem UI: ${reason}` };
+      return { block: true, reason: `blocked without UI: ${reason}` };
     }
 
     const command = detail.length > 400 ? detail.slice(0, 400) + "…" : detail;
     const choice = await ctx.ui.select(
-      `Permitir ${name}?\n\n${reason}\n\n${command}`,
-      ["Permitir", "Permitir e não perguntar mais", "Bloquear"],
+      `Allow ${name}?\n\n${reason}\n\n${command}`,
+      ["Allow", "Allow and stop asking", "Block"],
     );
 
-    if (choice === "Permitir") return undefined;
-    if (choice === "Permitir e não perguntar mais") {
+    if (choice === "Allow") return undefined;
+    if (choice === "Allow and stop asking") {
       // remember for this process
       allowAll = true;
       return undefined;
     }
-    return { block: true, reason: "Bloqueado pelo usuário" };
+    return { block: true, reason: "blocked by the user" };
   });
 
   pi.on("tool_call", async () => {

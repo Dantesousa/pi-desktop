@@ -30,7 +30,7 @@
     try {
       await app.switchSession(path);
     } catch (e: any) {
-      app.stderr.push(`switch falhou: ${e?.message ?? e}`);
+      app.stderr.push(t("toast.switchFailed", { error: e?.message ?? e }));
     }
   }
 
@@ -79,7 +79,7 @@
   <div class="sessions">
     {#each visible as s (s.path)}
       <div class="row" class:active={s.id === app.sessionId} class:pinned={app.isPinned(s.path)}>
-        <button class="item" onclick={() => openSession(s.path)} title={`${s.cwd}\n${s.messages} mensagens`}>
+        <button class="item" onclick={() => openSession(s.path)} title={`${s.cwd}\n${t("sidebar.messages", { n: s.messages })}`}>
           <span class="nm">
             {#if app.isPinned(s.path)}<span class="pin">📌</span>{/if}
             {s.name ?? s.id.slice(0, 8)}

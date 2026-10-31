@@ -36,7 +36,7 @@
 
   const output = $derived(part.output ?? "");
   const preview = $derived(
-    showAll || output.length < 1600 ? output : output.slice(0, 1600) + "\n… (truncado)",
+    showAll || output.length < 1600 ? output : output.slice(0, 1600) + "\n" + t("tool.truncated"),
   );
 
   const diffs = $derived.by(() => {
@@ -89,7 +89,7 @@
     {#if summary}<span class="summary">{summary}</span>{/if}
     <span class="spacer"></span>
     {#if diffs.length}
-      <span class="badge">{diffs.reduce((n, d) => n + d.lines.filter((l) => l.type !== "ctx").length, 0)} linhas</span>
+      <span class="badge">{t("tool.lines", { n: diffs.reduce((n: number, d: any) => n + d.lines.filter((l: any) => l.type !== "ctx").length, 0) })}</span>
     {/if}
     {#if part.running}
       <span class="spin"></span>

@@ -34,7 +34,7 @@ fn file_for(target: &str) -> Result<PathBuf, String> {
         "memory" => Ok(dir.join("MEMORY.md")),
         "user" => Ok(dir.join("USER.md")),
         "failure" | "failures" => Ok(dir.join("failures.md")),
-        other => Err(format!("target desconhecido: {other}")),
+        other => Err(format!("unknown target: {other}")),
     }
 }
 

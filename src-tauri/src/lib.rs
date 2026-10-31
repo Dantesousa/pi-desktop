@@ -452,9 +452,9 @@ pub fn run() {
             }
 
             // tray icon
-            let show = MenuItem::with_id(app, "show", "Mostrar janela", true, None::<&str>)?;
-            let new_chat = MenuItem::with_id(app, "new", "Nova conversa", true, None::<&str>)?;
-            let quit = MenuItem::with_id(app, "quit", "Sair", true, None::<&str>)?;
+            let show = MenuItem::with_id(app, "show", "Show window", true, None::<&str>)?;
+            let new_chat = MenuItem::with_id(app, "new", "New chat", true, None::<&str>)?;
+            let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
             let menu = Menu::with_items(app, &[&show, &new_chat, &quit])?;
 
             let tray_image = tauri::image::Image::from_bytes(icon_bytes).ok()

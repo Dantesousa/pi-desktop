@@ -39,7 +39,7 @@
         group: t("palette.action"),
         run: async () => {
           const p = await app.exportHtml();
-          if (p) app.toast(`exportado: ${p}`, "ok");
+          if (p) app.toast(t("toast.exported", { path: p }), "ok");
         },
       },
       {
