@@ -8,7 +8,7 @@ use std::io::{BufRead, BufReader, Read};
 use std::process::{Child, Command, Stdio};
 use std::sync::{Arc, Mutex};
 use std::time::{SystemTime, UNIX_EPOCH};
-use tauri::{AppHandle, Emitter, Manager};
+use tauri::{AppHandle, Emitter, Manager, Runtime};
 
 const MAX_OUTPUT: usize = 200 * 1024;
 
@@ -93,8 +93,8 @@ fn spawn(command: &str, dir: &str) -> Result<(Child, Arc<Mutex<VecDeque<u8>>>), 
     Ok((child, output))
 }
 
-pub fn start(
-    app: &AppHandle,
+pub fn start<R: Runtime>(
+    app: &AppHandle<R>,
     state: &ProcState,
     command: &str,
     cwd: Option<String>,
@@ -104,7 +104,7 @@ pub fn start(
         std::env::var("HOME").unwrap_or_else(|_| "/".to_string())
     });
 
-    let (mut child, output) = spawn(command, &dir)?;
+    let (child, output) = spawn(command, &dir)?;
 
     let id = format!("p{}", now_ms());
     let meta = BgProc {
@@ -200,7 +200,7 @@ pub fn list(state: &ProcState) -> Vec<BgProc> {
     guard.iter().map(|e| e.meta.clone()).collect()
 }
 
-pub fn output_tail(app: &AppHandle, id: &str, lines: usize) -> String {
+pub fn output_tail<R: Runtime>(app: &AppHandle<R>, id: &str, lines: usize) -> String {
     let st = app.state::<ProcState>();
     let guard = st.entries.lock().unwrap();
     let Some(entry) = guard.iter().find(|e| e.meta.id == id) else {
@@ -261,6 +261,62 @@ mod tests {
         let text = String::from_utf8_lossy(&bytes);
         assert!(text.contains("hello"), "stdout missing: {text}");
         assert!(text.contains("oops"), "stderr missing: {text}");
+    }
+
+    #[test]
+    fn tracks_a_long_running_process_and_stops_it() {
+        let start = std::time::Instant::now();
+        let (mut child, output) = spawn("echo booting; sleep 5", "/tmp").unwrap();
+
+        std::thread::sleep(std::time::Duration::from_millis(300));
+        assert!(child.try_wait().unwrap().is_none(), "should still be running");
+
+        let text: String = {
+            let q = output.lock().unwrap();
+            String::from_utf8_lossy(&q.iter().copied().collect::<Vec<u8>>()).into_owned()
+        };
+        assert!(text.contains("booting"), "output not captured: {text}");
+
+        let _ = child.kill();
+        let status = child.wait().unwrap();
+        assert!(!status.success(), "killed process should not be successful");
+        assert!(start.elapsed() < std::time::Duration::from_secs(4), "stop was not prompt");
+    }
+
+    #[test]
+    fn full_lifecycle_with_a_real_app_handle() {
+        use tauri::Manager;
+
+        let app = tauri::test::mock_builder()
+            .build(tauri::test::mock_context(tauri::test::noop_assets()))
+            .unwrap();
+        app.manage(ProcState::default());
+        let handle = app.handle().clone();
+        let state = app.state::<ProcState>();
+
+        let started = start(&handle, &state, "echo booting; sleep 0.4; echo done", Some("/tmp".into()), true)
+            .expect("start");
+        assert_eq!(started.status, "running");
+
+        // output shows up while it runs
+        std::thread::sleep(std::time::Duration::from_millis(250));
+        assert!(output_tail(&handle, &started.id, 10).contains("booting"));
+
+        // supervisor flips it to exited with the code
+        std::thread::sleep(std::time::Duration::from_millis(900));
+        let listing = list(&state);
+        let entry = listing.iter().find(|p| p.id == started.id).expect("entry");
+        assert_eq!(entry.status, "exited", "status={:?}", entry.status);
+        assert_eq!(entry.exit_code, Some(0));
+        assert!(entry.ended_ms.is_some());
+
+        // output is kept after exit
+        let tail = output_tail(&handle, &started.id, 10);
+        assert!(tail.contains("done"), "tail after exit: {tail}");
+
+        // and it can be removed
+        remove(&state, &started.id).unwrap();
+        assert!(list(&state).is_empty());
     }
 
     #[test]
