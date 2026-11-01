@@ -224,6 +224,17 @@ export class Tab {
     return this.current!;
   }
 
+  /** Message that owns a tool call. Tools run *after* message_end, so the card
+   *  normally lives in a previous message — never spawn a fresh one for it. */
+  findToolMsg(id: string | undefined): Msg | null {
+    if (!id) return null;
+    for (let i = this.messages.length - 1; i >= 0; i--) {
+      const m = this.messages[i];
+      if (m.parts.some((p: any) => p.kind === "tool" && p.id === id)) return m;
+    }
+    return null;
+  }
+
   part(msg: Msg, ci: number, kind: Part["kind"]): Part {
     let p = msg.parts.find((x) => x.ci === ci && x.kind === kind);
     if (!p) {
@@ -1792,7 +1803,7 @@ class HinaState {
       }
 
       case "tool_execution_start": {
-        const msg = tab.ensureCurrent();
+        const msg = tab.findToolMsg(rec.toolCallId) ?? tab.ensureCurrent();
         const existing = msg.parts.find((p: any) => p.kind === "tool" && p.id === rec.toolCallId) as any;
         if (existing) {
           existing.name = rec.toolName;
@@ -1816,14 +1827,14 @@ class HinaState {
       }
 
       case "tool_execution_update": {
-        const msg = tab.current;
+        const msg = tab.findToolMsg(rec.toolCallId);
         const p = msg?.parts.find((x: any) => x.kind === "tool" && x.id === rec.toolCallId) as any;
         if (p) p.output = extractText(rec.partialResult);
         break;
       }
 
       case "tool_execution_end": {
-        const msg = tab.current;
+        const msg = tab.findToolMsg(rec.toolCallId);
         const p = msg?.parts.find((x: any) => x.kind === "tool" && x.id === rec.toolCallId) as any;
         if (p) {
           p.running = false;
