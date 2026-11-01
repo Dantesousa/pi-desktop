@@ -12,9 +12,13 @@
     if (!text.startsWith("/")) return [];
     const q = text.slice(1).toLowerCase();
     if (q.includes(" ")) return [];
-    return app.commands
+    const local = app.localCommands
+      .filter((c) => c.name.toLowerCase().includes(q))
+      .map((c) => ({ name: c.name, description: c.description, source: "app" }));
+    const remote = app.commands
       .filter((c) => c.name.toLowerCase().includes(q))
       .slice(0, 8);
+    return [...local, ...remote].slice(0, 10);
   });
 
   $effect(() => {
@@ -60,16 +64,12 @@
 
   async function send() {
     if (!text.trim() && app.chips.length === 0) return;
-    const cmd = text.trim().toLowerCase();
-    if (cmd === "/yolo" || cmd === "/yolo on") {
-      text = "";
-      await app.setYolo(true);
-      return;
-    }
-    if (cmd === "/safe" || cmd === "/yolo off") {
-      text = "";
-      await app.setYolo(false);
-      return;
+    if (text.trim().startsWith("/")) {
+      const handled = await app.runLocalCommand(text);
+      if (handled) {
+        text = "";
+        return;
+      }
     }
     const payload = text;
     const chips = [...app.chips];
@@ -112,6 +112,7 @@
         <button class="cmd" onclick={() => pickCommand(cmd.name)}>
           <span class="cname">/{cmd.name}</span>
           <span class="cdesc">{cmd.description ?? cmd.source}</span>
+          {#if cmd.source === "app"}<span class="cbadge">{t("cmd.badge")}</span>{/if}
         </button>
       {/each}
     </div>
@@ -324,6 +325,14 @@
     font-family: var(--mono);
     color: #9fc0ff;
     font-size: 12px;
+  }
+  .cbadge {
+    font-size: 9px;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    border-radius: 999px;
+    padding: 0 5px;
+    flex: 0 0 auto;
   }
   .cdesc {
     color: var(--text-faint);

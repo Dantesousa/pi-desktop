@@ -287,6 +287,24 @@ describe("sidebar navigation", () => {
   });
 });
 
+describe("local slash commands", () => {
+  it("/yolo turns the gate off and /safe restores it", async () => {
+    freshTab();
+    const spy = vi.spyOn(app as any, "setGate").mockResolvedValue(undefined as any);
+    expect(await app.runLocalCommand("/yolo")).toBe(true);
+    expect(spy).toHaveBeenCalledWith("off");
+    expect(await app.runLocalCommand("/safe")).toBe(true);
+    expect(spy).toHaveBeenCalledWith("dangerous");
+    expect(await app.runLocalCommand("/not-a-command")).toBe(false);
+  });
+
+  it("lists app commands for the slash menu", () => {
+    const names = app.localCommands.map((c) => c.name);
+    expect(names).toContain("yolo");
+    expect(names).toContain("safe");
+  });
+});
+
 describe("themes", () => {
   it("applies the preset and a custom accent on the root element", () => {
     app.setTheme("hacker");

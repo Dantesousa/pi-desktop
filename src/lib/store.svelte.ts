@@ -308,6 +308,38 @@ class HinaState {
   get messages() {
     return this.active?.messages ?? [];
   }
+  /** Slash commands handled by the app itself (not by the agent). */
+  get localCommands(): { name: string; description: string }[] {
+    return [
+      { name: "yolo", description: t("cmd.yolo") },
+      { name: "safe", description: t("cmd.safe") },
+      { name: "new", description: t("cmd.new") },
+      { name: "stop", description: t("cmd.stop") },
+    ];
+  }
+
+  /** Runs an app-level slash command. Returns true when it was handled. */
+  async runLocalCommand(raw: string): Promise<boolean> {
+    const [name, ...rest] = raw.trim().slice(1).split(/\s+/);
+    const arg = rest.join(" ").toLowerCase();
+    switch (name.toLowerCase()) {
+      case "yolo":
+        await this.setYolo(arg !== "off");
+        return true;
+      case "safe":
+        await this.setYolo(false);
+        return true;
+      case "new":
+        await this.newSession();
+        return true;
+      case "stop":
+        await this.abort();
+        return true;
+      default:
+        return false;
+    }
+  }
+
   get models() {
     return this.active?.models ?? [];
   }

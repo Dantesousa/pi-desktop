@@ -69,6 +69,11 @@ const en = {
   "composer.hint": "Enter sends · Shift+Enter newline · Ctrl+K commands",
   "composer.behavior": "how to deliver the message while running",
   "composer.steer": "steer",
+  "cmd.yolo": "run every tool call without asking for permission",
+  "cmd.safe": "ask before dangerous tools again",
+  "cmd.new": "start a new session",
+  "cmd.stop": "stop the running turn",
+  "cmd.badge": "app",
   "composer.followUp": "after",
 
   // messages / tools
@@ -434,6 +439,12 @@ const ptBR: Record<keyof typeof en, string> = {
   "composer.hint": "Enter envia · Shift+Enter quebra linha · Ctrl+K comandos",
   "composer.behavior": "como entregar a mensagem durante a execução",
   "composer.steer": "desviar",
+  "cmd.yolo": "rodar toda ferramenta sem pedir permissão",
+  "cmd.safe": "voltar a pedir permissão nas ferramentas perigosas",
+  "cmd.new": "começar uma sessão nova",
+  "cmd.stop": "parar o turno em andamento",
+  "cmd.badge": "app",
+
   "composer.followUp": "depois",
 
   "msg.thinking": "raciocínio",
