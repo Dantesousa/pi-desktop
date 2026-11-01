@@ -16,6 +16,7 @@
   import SessionTools from "$lib/components/SessionTools.svelte";
   import BrowserPanel from "$lib/components/BrowserPanel.svelte";
   import ProcPanel from "$lib/components/ProcPanel.svelte";
+  import ProcBar from "$lib/components/ProcBar.svelte";
 
   let scroller = $state<HTMLElement | null>(null);
   let stick = $state(true);
@@ -158,6 +159,7 @@
       <button class="jump" onclick={scrollToBottom}>↓</button>
     {/if}
 
+    <ProcBar />
     <Composer focusToken={app.focusToken} />
   </main>
 

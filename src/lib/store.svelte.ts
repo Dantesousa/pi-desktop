@@ -301,6 +301,7 @@ class HinaState {
   private pollTimer: number | null = null;
   private browserTimer: number | null = null;
   private procTimer: number | null = null;
+  private procPollTimer: number | null = null;
   private waiting = new Map<string, { resolve: (v: any) => void; reject: (e: any) => void; timer: number }>();
   private booted = false;
   private notificationsAllowed: boolean | null = null;
@@ -493,7 +494,16 @@ class HinaState {
     }
     initLocale();
     this.applyTheme();
-    const panel = new URLSearchParams(location.search).get("panel");
+    const params = new URLSearchParams(location.search);
+    if (params.get("fake") === "procs") {
+      const now = Date.now();
+      this.procs = [
+        { id: "p1", command: "npm run dev", cwd: "/home/dante/proj", status: "running", exitCode: null, startedMs: now - 92000, endedMs: null, notify: true },
+        { id: "p2", command: "cargo watch -x check", cwd: "/home/dante/proj", status: "running", exitCode: null, startedMs: now - 15000, endedMs: null, notify: true },
+        { id: "p3", command: "python -m http.server 9000", cwd: "/tmp", status: "failed", exitCode: 1, startedMs: now - 300000, endedMs: now - 240000, notify: false },
+      ];
+    }
+    const panel = params.get("panel");
     if (panel === "bash") this.showBash = true;
     if (panel === "fork") this.showFork = true;
     if (panel === "tree") this.showTree = true;
@@ -594,6 +604,11 @@ class HinaState {
     await this.loadSessions();
     this.syncSessionMeta(this.active);
     this.startPolling();
+    // keep the background-process bar fresh even when the panel is closed
+    void this.refreshProcs();
+    this.procPollTimer = window.setInterval(() => {
+      if (!this.showProcs) void this.refreshProcs();
+    }, 2500);
     setTimeout(() => void this.selfCheckLayout(), 2500);
   }
 
@@ -654,7 +669,7 @@ class HinaState {
     try {
       this.procs = await api.procList();
       if (this.procId && !this.procs.some((p) => p.id === this.procId)) this.procId = null;
-      if (this.procId) this.procText = await api.procOutput(this.procId, 200);
+      if (this.showProcs && this.procId) this.procText = await api.procOutput(this.procId, 200);
     } catch {
       /* ignore */
     }
@@ -881,7 +896,16 @@ class HinaState {
     this.theme = theme;
     localStorage.setItem("pi.theme", theme);
     this.applyTheme();
-    const panel = new URLSearchParams(location.search).get("panel");
+    const params = new URLSearchParams(location.search);
+    if (params.get("fake") === "procs") {
+      const now = Date.now();
+      this.procs = [
+        { id: "p1", command: "npm run dev", cwd: "/home/dante/proj", status: "running", exitCode: null, startedMs: now - 92000, endedMs: null, notify: true },
+        { id: "p2", command: "cargo watch -x check", cwd: "/home/dante/proj", status: "running", exitCode: null, startedMs: now - 15000, endedMs: null, notify: true },
+        { id: "p3", command: "python -m http.server 9000", cwd: "/tmp", status: "failed", exitCode: 1, startedMs: now - 300000, endedMs: now - 240000, notify: false },
+      ];
+    }
+    const panel = params.get("panel");
     if (panel === "bash") this.showBash = true;
     if (panel === "fork") this.showFork = true;
     if (panel === "tree") this.showTree = true;
@@ -912,7 +936,16 @@ class HinaState {
     this.accent = hex;
     localStorage.setItem("pi.accent", hex);
     this.applyTheme();
-    const panel = new URLSearchParams(location.search).get("panel");
+    const params = new URLSearchParams(location.search);
+    if (params.get("fake") === "procs") {
+      const now = Date.now();
+      this.procs = [
+        { id: "p1", command: "npm run dev", cwd: "/home/dante/proj", status: "running", exitCode: null, startedMs: now - 92000, endedMs: null, notify: true },
+        { id: "p2", command: "cargo watch -x check", cwd: "/home/dante/proj", status: "running", exitCode: null, startedMs: now - 15000, endedMs: null, notify: true },
+        { id: "p3", command: "python -m http.server 9000", cwd: "/tmp", status: "failed", exitCode: 1, startedMs: now - 300000, endedMs: now - 240000, notify: false },
+      ];
+    }
+    const panel = params.get("panel");
     if (panel === "bash") this.showBash = true;
     if (panel === "fork") this.showFork = true;
     if (panel === "tree") this.showTree = true;
@@ -925,7 +958,16 @@ class HinaState {
     this.chatFont = size;
     localStorage.setItem("pi.chatFont", String(size));
     this.applyTheme();
-    const panel = new URLSearchParams(location.search).get("panel");
+    const params = new URLSearchParams(location.search);
+    if (params.get("fake") === "procs") {
+      const now = Date.now();
+      this.procs = [
+        { id: "p1", command: "npm run dev", cwd: "/home/dante/proj", status: "running", exitCode: null, startedMs: now - 92000, endedMs: null, notify: true },
+        { id: "p2", command: "cargo watch -x check", cwd: "/home/dante/proj", status: "running", exitCode: null, startedMs: now - 15000, endedMs: null, notify: true },
+        { id: "p3", command: "python -m http.server 9000", cwd: "/tmp", status: "failed", exitCode: 1, startedMs: now - 300000, endedMs: now - 240000, notify: false },
+      ];
+    }
+    const panel = params.get("panel");
     if (panel === "bash") this.showBash = true;
     if (panel === "fork") this.showFork = true;
     if (panel === "tree") this.showTree = true;
