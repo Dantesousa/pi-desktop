@@ -310,6 +310,11 @@ fn mcp_save(config: serde_json::Value) -> Result<(), String> {
 }
 
 #[tauri::command]
+fn models_sync() -> Result<String, String> {
+    mcp::sync_custom_models()
+}
+
+#[tauri::command]
 fn mcp_status(cwd: Option<String>) -> Result<Vec<mcp::McpServerStatus>, String> {
     mcp::status(cwd)
 }
@@ -475,6 +480,7 @@ pub fn run() {
             mcp_save,
             mcp_check,
             mcp_status,
+            models_sync,
             browser_enable,
             browser_disable,
             browser_preview,

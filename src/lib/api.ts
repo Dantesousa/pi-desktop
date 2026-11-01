@@ -77,6 +77,7 @@ export const api = {
   mcpStatus: async (cwd: string | null) => camel(await invoke<any[]>("mcp_status", { cwd })),
 
   // hubs
+  modelsSync: () => invoke<string>("models_sync"),
   browserEnable: () => invoke<string>("browser_enable"),
   browserDisable: () => invoke<void>("browser_disable"),
   browserPreview: async (withImage = true) =>

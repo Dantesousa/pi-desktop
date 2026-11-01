@@ -328,3 +328,122 @@ pub fn status(cwd: Option<String>) -> Result<Vec<McpServerStatus>, String> {
     }
     Ok(out)
 }
+
+// ── custom provider model sync ───────────────────────────────────────────────
+
+/// Re-reads `/models` from every OpenAI-compatible provider in models.json and
+/// rewrites its model list (catalogs rotate; this keeps the picker honest).
+pub fn sync_custom_models() -> Result<String, String> {
+    let path = PathBuf::from(std::env::var("HOME").unwrap_or_default())
+        .join(".pi/agent/models.json");
+    let text = fs::read_to_string(&path).map_err(|e| format!("models.json: {e}"))?;
+    let mut config: serde_json::Value =
+        serde_json::from_str(&text).map_err(|e| format!("models.json inválido: {e}"))?;
+
+    let auth_path = PathBuf::from(std::env::var("HOME").unwrap_or_default()).join(".pi/agent/auth.json");
+    let auth: serde_json::Value = fs::read_to_string(&auth_path)
+        .ok()
+        .and_then(|s| serde_json::from_str(&s).ok())
+        .unwrap_or_else(|| serde_json::json!({}));
+
+    let Some(providers) = config.get_mut("providers").and_then(|v| v.as_object_mut()) else {
+        return Err("models.json has no providers".into());
+    };
+
+    let mut updated = Vec::new();
+    for (name, provider) in providers.iter_mut() {
+        let api = provider.get("api").and_then(|v| v.as_str()).unwrap_or("");
+        let base = provider
+            .get("baseUrl")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .trim_end_matches('/')
+            .to_string();
+        if api != "openai-completions" || base.is_empty() {
+            continue;
+        }
+        let key = provider
+            .get("apiKey")
+            .and_then(|v| v.as_str())
+            .map(str::to_string)
+            .or_else(|| {
+                auth.get(name)
+                    .and_then(|c| c.get("key"))
+                    .and_then(|v| v.as_str())
+                    .map(str::to_string)
+            });
+        let Some(key) = key else { continue };
+
+        let body = fetch_with_key(&format!("{base}/models"), &key)?;
+        let json: serde_json::Value =
+            serde_json::from_str(&body).map_err(|e| format!("{name}: resposta inesperada: {e}"))?;
+        let entries = json
+            .get("data")
+            .and_then(|v| v.as_array())
+            .cloned()
+            .unwrap_or_default();
+        if entries.is_empty() {
+            continue;
+        }
+        let mut models: Vec<serde_json::Value> = Vec::new();
+        for m in entries {
+            let Some(id) = m.get("id").and_then(|v| v.as_str()) else { continue };
+            let locked = m.get("requires_training_optin").and_then(|v| v.as_bool()).unwrap_or(false)
+                && !m.get("premium_unlocked").and_then(|v| v.as_bool()).unwrap_or(false);
+            let base_name = m
+                .get("display_name")
+                .or_else(|| m.get("name"))
+                .and_then(|v| v.as_str())
+                .unwrap_or(id)
+                .chars()
+                .take(56)
+                .collect::<String>();
+            let mods: Vec<String> = m
+                .get("architecture")
+                .and_then(|a| a.get("input_modalities"))
+                .and_then(|v| v.as_array())
+                .map(|a| a.iter().filter_map(|x| x.as_str().map(str::to_string)).collect())
+                .unwrap_or_default();
+            let mut e = serde_json::json!({
+                "id": id,
+                "name": if locked { format!("{base_name} (premium)") } else { base_name },
+                "contextWindow": m.get("context_length").and_then(|v| v.as_u64()).unwrap_or(128000),
+                "maxTokens": 16384,
+                "input": if mods.iter().any(|x| x == "image") { serde_json::json!(["text","image"]) } else { serde_json::json!(["text"]) },
+            });
+            if m.get("supported_parameters")
+                .and_then(|v| v.as_array())
+                .map(|a| a.iter().any(|p| ["reasoning","include_reasoning","thinking","reasoning_effort"].contains(&p.as_str().unwrap_or(""))))
+                .unwrap_or(false)
+            {
+                e["reasoning"] = serde_json::json!(true);
+            }
+            models.push(e);
+        }
+        models.sort_by(|a, b| {
+            let pa = a["name"].as_str().unwrap_or("").contains("(premium)");
+            let pb = b["name"].as_str().unwrap_or("").contains("(premium)");
+            pa.cmp(&pb)
+        });
+        provider["models"] = serde_json::Value::Array(models.clone());
+        updated.push(format!("{name}: {}", models.len()));
+    }
+
+    if updated.is_empty() {
+        return Err("no openai-compatible provider with an api key".into());
+    }
+    fs::write(&path, serde_json::to_string_pretty(&config).map_err(|e| e.to_string())?)
+        .map_err(|e| format!("failed to write models.json: {e}"))?;
+    Ok(updated.join(", "))
+}
+
+fn fetch_with_key(url: &str, key: &str) -> Result<String, String> {
+    let out = std::process::Command::new("curl")
+        .args(["-sS", "-L", "--max-time", "25", "-H", "Accept: application/json"])
+        .arg("-H")
+        .arg(format!("Authorization: Bearer {key}"))
+        .arg(url)
+        .output()
+        .map_err(|e| format!("curl failed: {e}"))?;
+    Ok(String::from_utf8_lossy(&out.stdout).into_owned())
+}

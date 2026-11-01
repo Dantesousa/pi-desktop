@@ -311,6 +311,7 @@
         <div class="mrow">
           <span class="lbl">{t("top.models")}</span>
           <input class="mfilter" placeholder={t("top.modelsFilter")} bind:value={modelFilter} />
+          <button class="mini" title={t("top.syncModels")} onclick={() => app.syncModels()}>⟳</button>
         </div>
         <div class="mlist">
           {#each filteredModels as m (m.provider + m.id)}

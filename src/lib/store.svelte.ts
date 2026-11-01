@@ -1248,6 +1248,18 @@ class HinaState {
     }
   }
 
+  /** Re-reads the model catalog from every OpenAI-compatible provider. */
+  async syncModels() {
+    try {
+      const result = await api.modelsSync();
+      await this.refreshModels();
+      await this.refreshState();
+      this.toast(t("toast.modelsSynced", { result }), "ok");
+    } catch (e: any) {
+      this.toast(t("toast.modelsSyncFailed", { error: e?.message ?? e }), "error");
+    }
+  }
+
   async setModel(provider: string, modelId: string) {
     const tab = this.active;
     const m = await this.send(tab.id, { type: "set_model", provider, modelId });

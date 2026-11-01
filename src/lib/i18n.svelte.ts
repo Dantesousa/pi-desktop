@@ -139,6 +139,7 @@ const en = {
   "top.language": "language",
   "top.models": "models",
   "top.modelsFilter": "filter models…",
+  "top.syncModels": "re-read the catalog from the provider",
   "top.favorite": "favorite (pinned on top)",
   "top.showModel": "show in the picker",
   "top.hideModel": "hide from the picker",
@@ -372,6 +373,8 @@ const en = {
   "proc.detected": "detected",
   "proc.killDetected": "stop this process",
   "toast.procKilled": "process {pid} stopped",
+  "toast.modelsSynced": "catalog updated — {result}",
+  "toast.modelsSyncFailed": "could not sync models: {error}",
   "proc.empty": "nothing running — start one with /bg <command>",
   "proc.command": "command…",
   "proc.start": "start",
@@ -530,6 +533,8 @@ const ptBR: Record<keyof typeof en, string> = {
   "top.language": "idioma",
   "top.models": "modelos",
   "top.modelsFilter": "filtrar modelos…",
+  "top.syncModels": "reler o catálogo do provedor",
+
   "top.favorite": "favoritar (fica no topo)",
   "top.showModel": "mostrar no seletor",
   "top.hideModel": "ocultar do seletor",
@@ -761,6 +766,9 @@ const ptBR: Record<keyof typeof en, string> = {
   "proc.detected": "detectado",
   "proc.killDetected": "encerrar este processo",
   "toast.procKilled": "processo {pid} encerrado",
+  "toast.modelsSynced": "catálogo atualizado — {result}",
+  "toast.modelsSyncFailed": "não consegui sincronizar: {error}",
+
 
 
   "proc.empty": "nada rodando — comece com /bg <comando>",
