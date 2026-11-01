@@ -1,6 +1,6 @@
 {
   "name": "pi-desktop",
-  "version": "0.1.13",
+  "version": "0.1.14",
   "description": "Native desktop client for the Pi coding agent",
   "type": "module",
   "scripts": {
