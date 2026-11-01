@@ -151,6 +151,20 @@ npm run tauri build
 
 Artifacts land in `src-tauri/target/release/bundle/` (`appimage/` and `deb/`).
 
+### Release assets
+
+`scripts/publish-assets.sh <version>` reshuffles the assets after the CI publishes:
+
+| file | what it is |
+|---|---|
+| `Hina_<v>_amd64.AppImage` | **canonical** — the self-contained build (runs on any distro) |
+| `Hina_<v>_amd64_selfcontained.AppImage` | same file, for updaters that match the old suffix |
+| `Hina_<v>_amd64_ubuntu.AppImage` | the CI build (Ubuntu/Debian only) |
+| `Hina_<v>_amd64.deb` | Debian package |
+
+Publishing the self-contained build under the generic name means an updater that just
+grabs “the AppImage from the release” never installs the Ubuntu-only build by mistake.
+
 `npm run dist` is the same as `npm run tauri build`. Note that an AppImage built on
 Ubuntu (CI) bundles Ubuntu's WebKitGTK without its ICU dependency and will only start
 on Debian-derived systems; a build made on your own distro (`npm run dist`) bundles
