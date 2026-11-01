@@ -273,6 +273,8 @@ class HinaState {
   showProcs = $state(false);
   procs = $state<any[]>([]);
   externals = $state<any[]>([]);
+  localServers = $state<any[]>([]);
+  scanningLocal = $state(false);
   procId = $state<string | null>(null);
   procText = $state("");
   browser = $state<{
@@ -1260,6 +1262,29 @@ class HinaState {
     }
   }
 
+  /** Probes the usual local ports for OpenAI-compatible servers. */
+  async scanLocalModels() {
+    this.scanningLocal = true;
+    try {
+      this.localServers = await api.localModelsScan();
+      if (!this.localServers.length) this.toast(t("toast.noLocalServers"), "info");
+    } catch (e: any) {
+      this.toast(String(e?.message ?? e), "error");
+    } finally {
+      this.scanningLocal = false;
+    }
+  }
+
+  async addLocalServer(server: any) {
+    try {
+      const result = await api.localModelsAdd(server.label, server.baseUrl, server.models);
+      await this.refreshModels();
+      this.toast(t("toast.localAdded", { result }), "ok");
+    } catch (e: any) {
+      this.toast(String(e?.message ?? e), "error");
+    }
+  }
+
   async setModel(provider: string, modelId: string) {
     const tab = this.active;
     const m = await this.send(tab.id, { type: "set_model", provider, modelId });
@@ -2075,6 +2100,10 @@ class HinaState {
 
       case "auto_retry_end":
         tab.retrying = false;
+        break;
+
+      case "auto_retry_scheduled":
+        this.toast(t("toast.retryScheduled", { s: Math.round((rec.delayMs ?? 0) / 1000) }), "warn");
         break;
 
       case "auto_retry_start":

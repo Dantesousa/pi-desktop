@@ -78,6 +78,9 @@ export const api = {
 
   // hubs
   modelsSync: () => invoke<string>("models_sync"),
+  localModelsScan: async () => camel(await invoke<any[]>("local_models_scan")),
+  localModelsAdd: (label: string, baseUrl: string, models: string[]) =>
+    invoke<string>("local_models_add", { label, baseUrl, models }),
   browserEnable: () => invoke<string>("browser_enable"),
   browserDisable: () => invoke<void>("browser_disable"),
   browserPreview: async (withImage = true) =>

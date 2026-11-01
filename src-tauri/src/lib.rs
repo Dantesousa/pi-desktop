@@ -310,6 +310,16 @@ fn mcp_save(config: serde_json::Value) -> Result<(), String> {
 }
 
 #[tauri::command]
+fn local_models_scan() -> Vec<mcp::LocalServer> {
+    mcp::scan_local()
+}
+
+#[tauri::command]
+fn local_models_add(label: String, base_url: String, models: Vec<String>) -> Result<String, String> {
+    mcp::add_local_provider(&label, &base_url, models)
+}
+
+#[tauri::command]
 fn models_sync() -> Result<String, String> {
     mcp::sync_custom_models()
 }
@@ -481,6 +491,8 @@ pub fn run() {
             mcp_check,
             mcp_status,
             models_sync,
+            local_models_scan,
+            local_models_add,
             browser_enable,
             browser_disable,
             browser_preview,

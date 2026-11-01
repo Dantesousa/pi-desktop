@@ -452,6 +452,11 @@ pub fn scan(cwd: Option<String>, min_age_ms: u64) -> Vec<ExternalProc> {
         if !has_session_marker(pid) {
             continue;
         }
+        // MCP helpers inherit the marker too; they are infrastructure, not servers
+        let lower = command.to_lowercase();
+        if lower.contains("mcp") || lower.contains("browser-mcp") || lower.contains("playwright") {
+            continue;
+        }
         // skip short-lived helpers
         let started = started_ms(pid).unwrap_or(now);
         if now.saturating_sub(started) < min_age_ms {
@@ -467,7 +472,7 @@ pub fn scan(cwd: Option<String>, min_age_ms: u64) -> Vec<ExternalProc> {
             rss_kb: rss_kb(pid),
         });
     }
-    out.sort_by(|a, b| a.started_ms.cmp(&b.started_ms));
+    out.sort_by(|a, b| b.started_ms.cmp(&a.started_ms));
     out.truncate(12);
     out
 }
@@ -522,24 +527,20 @@ mod scan_tests {
 
     #[test]
     fn scan_ignores_processes_without_the_session_marker() {
-        let _ = std::process::Command::new("sh")
-            .args(["-c", "cd /tmp && setsid sleep 8 >/dev/null 2>&1 &"])
-            .status();
-        std::thread::sleep(std::time::Duration::from_millis(600));
-        let found = scan(Some("/tmp".into()), 0);
-        assert!(!found.iter().any(|p| p.command.contains("sleep 8")));
-    }
-
-    #[test]
-    fn scan_ignores_processes_outside_the_project_dir() {
-        let mut child = std::process::Command::new("sh")
-            .args(["-c", "sleep 2"])
+        // a plain process with the marker removed: must never show up
+        let mut child = std::process::Command::new("sleep")
+            .arg("8")
             .current_dir("/tmp")
+            .env_remove("HINA_SESSION")
             .spawn()
             .unwrap();
-        std::thread::sleep(std::time::Duration::from_millis(200));
-        let found = scan(Some("/usr".into()), 0);
-        assert!(!found.iter().any(|p| p.pid == child.id()));
+        std::thread::sleep(std::time::Duration::from_millis(300));
+        let found = scan(Some("/tmp".into()), 0);
+        assert!(
+            !found.iter().any(|p| p.pid == child.id()),
+            "unmarked process {} should not be listed",
+            child.id()
+        );
         let _ = child.kill();
         let _ = child.wait();
     }

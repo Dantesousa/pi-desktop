@@ -140,6 +140,13 @@ const en = {
   "top.models": "models",
   "top.modelsFilter": "filter models…",
   "top.syncModels": "re-read the catalog from the provider",
+  "top.local": "local models",
+  "top.detectLocal": "detect local servers",
+  "top.detecting": "probing ports…",
+  "top.addLocal": "add",
+  "top.notRunning": "not running",
+  "toast.noLocalServers": "no local server answered — start LM Studio/Ollama/llama.cpp and try again",
+  "toast.localAdded": "provider added — {result}",
   "top.favorite": "favorite (pinned on top)",
   "top.showModel": "show in the picker",
   "top.hideModel": "hide from the picker",
@@ -374,6 +381,8 @@ const en = {
   "proc.killDetected": "stop this process",
   "toast.procKilled": "process {pid} stopped",
   "toast.modelsSynced": "catalog updated — {result}",
+  "toast.throttled": "the provider is throttling requests (429) — waiting a moment before retrying",
+  "toast.retryScheduled": "provider throttled — retrying in {s}s",
   "toast.modelsSyncFailed": "could not sync models: {error}",
   "proc.empty": "nothing running — start one with /bg <command>",
   "proc.command": "command…",
@@ -534,6 +543,14 @@ const ptBR: Record<keyof typeof en, string> = {
   "top.models": "modelos",
   "top.modelsFilter": "filtrar modelos…",
   "top.syncModels": "reler o catálogo do provedor",
+  "top.local": "modelos locais",
+  "top.detectLocal": "detectar servidores locais",
+  "top.detecting": "testando portas…",
+  "top.addLocal": "adicionar",
+  "top.notRunning": "não está rodando",
+  "toast.noLocalServers": "nenhum servidor local respondeu — abra o LM Studio/Ollama/llama.cpp e tente de novo",
+  "toast.localAdded": "provider adicionado — {result}",
+
 
   "top.favorite": "favoritar (fica no topo)",
   "top.showModel": "mostrar no seletor",
@@ -767,6 +784,9 @@ const ptBR: Record<keyof typeof en, string> = {
   "proc.killDetected": "encerrar este processo",
   "toast.procKilled": "processo {pid} encerrado",
   "toast.modelsSynced": "catálogo atualizado — {result}",
+  "toast.throttled": "o provedor está limitando as requisições (429) — esperando um instante para tentar de novo",
+  "toast.retryScheduled": "provedor limitou — tentando de novo em {s}s",
+
   "toast.modelsSyncFailed": "não consegui sincronizar: {error}",
 
 

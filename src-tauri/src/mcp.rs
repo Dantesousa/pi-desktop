@@ -447,3 +447,233 @@ fn fetch_with_key(url: &str, key: &str) -> Result<String, String> {
         .map_err(|e| format!("curl failed: {e}"))?;
     Ok(String::from_utf8_lossy(&out.stdout).into_owned())
 }
+
+// ── local OpenAI-compatible servers ──────────────────────────────────────────
+
+#[derive(Serialize, Clone)]
+pub struct LocalServer {
+    pub label: String,
+    pub base_url: String,
+    pub models: Vec<String>,
+    pub running: bool,
+    pub hint: Option<String>,
+}
+
+struct Probe {
+    label: &'static str,
+    slug: &'static str,
+    url: &'static str,
+    installed: &'static [&'static str],
+}
+
+const PROBES: &[Probe] = &[
+    Probe { label: "LM Studio", slug: "lmstudio", url: "http://127.0.0.1:1234/v1", installed: &["~/.lmstudio"] },
+    Probe { label: "Ollama", slug: "ollama", url: "http://127.0.0.1:11434/v1", installed: &["~/.ollama", "/usr/share/ollama"] },
+    Probe { label: "llama.cpp", slug: "llamacpp", url: "http://127.0.0.1:8080/v1", installed: &[] },
+    Probe { label: "vLLM", slug: "vllm", url: "http://127.0.0.1:8000/v1", installed: &[] },
+    Probe { label: "text-generation-webui", slug: "textgen", url: "http://127.0.0.1:5000/v1", installed: &[] },
+    Probe { label: "SGLang", slug: "sglang", url: "http://127.0.0.1:30000/v1", installed: &[] },
+    Probe { label: "KoboldCpp", slug: "koboldcpp", url: "http://127.0.0.1:5001/v1", installed: &[] },
+    Probe { label: "Jan", slug: "jan", url: "http://127.0.0.1:1337/v1", installed: &["~/.jan"] },
+];
+
+fn home_expand(p: &str) -> PathBuf {
+    if let Some(rest) = p.strip_prefix("~/") {
+        PathBuf::from(std::env::var("HOME").unwrap_or_default()).join(rest)
+    } else {
+        PathBuf::from(p)
+    }
+}
+
+fn probe_models(url: &str) -> Option<Vec<String>> {
+    let out = std::process::Command::new("curl")
+        .args(["-sS", "--max-time", "1.5", "-H", "Accept: application/json"])
+        .arg(format!("{url}/models"))
+        .output()
+        .ok()?;
+    if !out.status.success() {
+        return None;
+    }
+    let json: serde_json::Value = serde_json::from_slice(&out.stdout).ok()?;
+    let ids: Vec<String> = json
+        .get("data")
+        .and_then(|v| v.as_array())
+        .map(|a| {
+            a.iter()
+                .filter_map(|m| m.get("id").and_then(|v| v.as_str()).map(str::to_string))
+                .collect()
+        })
+        .unwrap_or_default();
+    if ids.is_empty() {
+        None
+    } else {
+        Some(ids)
+    }
+}
+
+/// Looks for OpenAI-compatible servers on the usual local ports.
+pub fn scan_local() -> Vec<LocalServer> {
+    let mut out = Vec::new();
+    for probe in PROBES {
+        let models = probe_models(probe.url);
+        let installed_dir = probe
+            .installed
+            .iter()
+            .map(|p| home_expand(p))
+            .find(|p| p.exists());
+        match models {
+            Some(models) => out.push(LocalServer {
+                label: probe.label.to_string(),
+                base_url: probe.url.to_string(),
+                models,
+                running: true,
+                hint: None,
+            }),
+            None => {
+                if let Some(dir) = installed_dir {
+                    out.push(LocalServer {
+                        label: probe.label.to_string(),
+                        base_url: probe.url.to_string(),
+                        models: vec![],
+                        running: false,
+                        hint: Some(format!(
+                            "installed at {} — start its server and scan again",
+                            dir.to_string_lossy()
+                        )),
+                    });
+                }
+            }
+        }
+    }
+    out
+}
+
+/// Adds (or replaces) a provider in models.json for a detected local server.
+pub fn add_local_provider(label: &str, base_url: &str, models: Vec<String>) -> Result<String, String> {
+    if models.is_empty() {
+        return Err("no models to add".into());
+    }
+    let slug: String = label
+        .to_lowercase()
+        .chars()
+        .map(|c| if c.is_alphanumeric() { c } else { '-' })
+        .collect::<String>()
+        .trim_matches('-')
+        .to_string();
+    let slug = if slug.is_empty() { "local".to_string() } else { slug };
+
+    let path = PathBuf::from(std::env::var("HOME").unwrap_or_default()).join(".pi/agent/models.json");
+    let mut config: serde_json::Value = fs::read_to_string(&path)
+        .ok()
+        .and_then(|s| serde_json::from_str(&s).ok())
+        .unwrap_or_else(|| serde_json::json!({ "providers": {} }));
+    if config.get("providers").is_none() {
+        config["providers"] = serde_json::json!({});
+    }
+
+    let entries: Vec<serde_json::Value> = models
+        .iter()
+        .map(|id| {
+            serde_json::json!({
+                "id": id,
+                "name": id,
+                "contextWindow": 16384,
+                "maxTokens": 4096,
+                "input": ["text"],
+            })
+        })
+        .collect();
+
+    config["providers"][&slug] = serde_json::json!({
+        "name": label,
+        "baseUrl": base_url,
+        "api": "openai-completions",
+        "apiKey": "local",
+        "models": entries,
+    });
+
+    fs::write(&path, serde_json::to_string_pretty(&config).map_err(|e| e.to_string())?)
+        .map_err(|e| format!("failed to write models.json: {e}"))?;
+    Ok(format!("{slug}: {} model(s)", models.len()))
+}
+
+#[cfg(test)]
+mod local_tests {
+    use super::*;
+
+    #[test]
+    fn probe_reads_model_ids_from_a_local_server() {
+        use std::io::{Read, Write};
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let port = listener.local_addr().unwrap().port();
+        std::thread::spawn(move || {
+            if let Ok((mut stream, _)) = listener.accept() {
+                let mut buf = [0u8; 1024];
+                let _ = stream.read(&mut buf);
+                let body = r#"{"object":"list","data":[{"id":"qwen-test"},{"id":"llama-test"}]}"#;
+                let resp = format!(
+                    "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                    body.len(),
+                    body
+                );
+                let _ = stream.write_all(resp.as_bytes());
+            }
+        });
+        let models = probe_models(&format!("http://127.0.0.1:{port}/v1")).expect("should answer");
+        assert_eq!(models, vec!["qwen-test".to_string(), "llama-test".to_string()]);
+    }
+
+    #[test]
+    fn probe_returns_none_when_nothing_listens() {
+        assert!(probe_models("http://127.0.0.1:9/v1").is_none());
+    }
+}
+
+#[cfg(test)]
+mod scan_local_tests {
+    use super::*;
+
+    #[test]
+    #[ignore = "needs a fake OpenAI server on 127.0.0.1:1234"]
+    fn scan_local_detects_the_lmstudio_port() {
+        let found = scan_local();
+        let hit = found.iter().find(|s| s.base_url.contains(":1234"));
+        let hit = hit.expect("expected a server on 1234");
+        assert!(hit.running);
+        assert!(!hit.models.is_empty(), "models should be listed");
+        println!("detected: {} → {:?}", hit.label, hit.models);
+    }
+}
+
+#[cfg(test)]
+mod add_local_tests {
+    use super::*;
+
+    #[test]
+    fn add_local_provider_writes_models_json() {
+        let tmp = std::env::temp_dir().join(format!("hina-home-{}", std::process::id()));
+        std::fs::create_dir_all(tmp.join(".pi/agent")).unwrap();
+        let old = std::env::var("HOME").ok();
+        std::env::set_var("HOME", &tmp);
+
+        let out = add_local_provider(
+            "LM Studio",
+            "http://127.0.0.1:1234/v1",
+            vec!["qwen-test".into(), "llama-test".into()],
+        );
+        let written = std::fs::read_to_string(tmp.join(".pi/agent/models.json")).unwrap();
+
+        match old {
+            Some(h) => std::env::set_var("HOME", h),
+            None => std::env::remove_var("HOME"),
+        }
+        let _ = std::fs::remove_dir_all(&tmp);
+
+        assert!(out.unwrap().contains("2 model(s)"));
+        let json: serde_json::Value = serde_json::from_str(&written).unwrap();
+        let provider = &json["providers"]["lm-studio"];
+        assert_eq!(provider["api"], "openai-completions");
+        assert_eq!(provider["baseUrl"], "http://127.0.0.1:1234/v1");
+        assert_eq!(provider["models"][0]["id"], "qwen-test");
+    }
+}

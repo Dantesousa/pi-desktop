@@ -340,6 +340,31 @@
         </div>
       </div>
 
+      <div class="localrow">
+        <button class="mini" onclick={() => app.scanLocalModels()} disabled={app.scanningLocal}>
+          {app.scanningLocal ? t("top.detecting") : t("top.detectLocal")}
+        </button>
+      </div>
+      {#if app.localServers.length}
+        <div class="mlist local">
+          {#each app.localServers as srv (srv.baseUrl)}
+            <div class="mitem">
+              <span class="dot" class:live={srv.running} class:off={!srv.running}></span>
+              <span class="mname">
+                {srv.label}
+                {#if srv.running}<span class="faint">· {srv.models.length} models</span>{/if}
+              </span>
+              {#if srv.running}
+                <button class="mini" onclick={() => app.addLocalServer(srv)}>{t("top.addLocal")}</button>
+              {:else}
+                <span class="faint small" title={srv.hint ?? ""}>{t("top.notRunning")}</span>
+              {/if}
+            </div>
+            {#if srv.hint}<div class="faint small hintline">{srv.hint}</div>{/if}
+          {/each}
+        </div>
+      {/if}
+
       <div class="buildrow">
         <span class="faint">
           {app.build?.channel ?? "—"}
@@ -711,6 +736,30 @@
     font-family: var(--mono);
     font-size: 9px;
     color: var(--text-faint);
+  }
+  .localrow {
+    display: flex;
+    gap: 6px;
+  }
+  .mlist.local {
+    max-height: 120px;
+  }
+  .hintline {
+    padding: 0 6px 3px;
+    font-size: 9.5px;
+  }
+  .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--text-faint);
+    flex: 0 0 auto;
+  }
+  .dot.live {
+    background: var(--green);
+  }
+  .dot.off {
+    background: var(--text-faint);
   }
   .buildrow {
     display: flex;
