@@ -376,6 +376,15 @@ fn started_ms(pid: u32) -> Option<u64> {
     Some((btime * 1000) + (ticks * 1000 / hz))
 }
 
+fn has_session_marker(pid: u32) -> bool {
+    std::fs::read(format!("/proc/{pid}/environ"))
+        .map(|b| {
+            b.split(|c| *c == 0)
+                .any(|kv| kv.starts_with(b"HINA_SESSION="))
+        })
+        .unwrap_or(false)
+}
+
 fn rss_kb(pid: u32) -> u64 {
     std::fs::read_to_string(format!("/proc/{pid}/status"))
         .ok()
@@ -413,6 +422,7 @@ fn descendants_of(root: u32) -> Vec<u32> {
 
 /// Long-running processes living in `cwd` that the app did not start itself.
 /// Lets the user watch watchers/dev-servers the agent (or a terminal) left running.
+/// Processes started by an agent (they inherit `HINA_SESSION` from the sidecar).
 pub fn scan(cwd: Option<String>, min_age_ms: u64) -> Vec<ExternalProc> {
     let me = std::process::id();
     let roots: Vec<u32> = {
@@ -437,17 +447,18 @@ pub fn scan(cwd: Option<String>, min_age_ms: u64) -> Vec<ExternalProc> {
         if command.is_empty() {
             continue;
         }
-        // skip short-lived helpers/kernel threads
+        // only processes started by one of our agents (env marker), never the
+        // user's own shells or unrelated daemons that happen to share the cwd
+        if !has_session_marker(pid) {
+            continue;
+        }
+        // skip short-lived helpers
         let started = started_ms(pid).unwrap_or(now);
         if now.saturating_sub(started) < min_age_ms {
             continue;
         }
         let proc_cwd = read_cwd(pid).unwrap_or_default();
-        if let Some(want) = cwd.as_ref() {
-            if !want.is_empty() && !proc_cwd.starts_with(want.as_str()) {
-                continue;
-            }
-        }
+        let _ = &cwd; // kept for API compatibility; the env marker is authoritative
         out.push(ExternalProc {
             pid,
             command: command.chars().take(160).collect(),
@@ -495,18 +506,28 @@ mod scan_tests {
     }
 
     #[test]
-    fn scan_finds_a_detached_process_in_the_project_dir() {
-        // setsid detaches, so the process is no longer our child (like a `nohup … &`)
+    fn scan_finds_an_agent_started_detached_process() {
+        // setsid detaches (like `nohup … &`), the env marker is what identifies it
         let _ = std::process::Command::new("sh")
-            .args(["-c", "cd /tmp && setsid sleep 3 >/dev/null 2>&1 &"])
+            .args(["-c", "cd /tmp && HINA_SESSION=test setsid sleep 7 >/dev/null 2>&1 &"])
             .status();
         std::thread::sleep(std::time::Duration::from_millis(600));
         let found = scan(Some("/tmp".into()), 0);
         assert!(
-            found.iter().any(|p| p.command.contains("sleep 3")),
-            "expected a detached sleep in {:?}",
+            found.iter().any(|p| p.command.contains("sleep 7")),
+            "expected the marked sleep in {:?}",
             found.iter().map(|p| p.command.clone()).collect::<Vec<_>>()
         );
+    }
+
+    #[test]
+    fn scan_ignores_processes_without_the_session_marker() {
+        let _ = std::process::Command::new("sh")
+            .args(["-c", "cd /tmp && setsid sleep 8 >/dev/null 2>&1 &"])
+            .status();
+        std::thread::sleep(std::time::Duration::from_millis(600));
+        let found = scan(Some("/tmp".into()), 0);
+        assert!(!found.iter().any(|p| p.command.contains("sleep 8")));
     }
 
     #[test]

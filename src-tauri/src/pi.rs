@@ -137,6 +137,9 @@ pub fn start(app: &AppHandle, state: &PiState, tab: &str, opts: StartOptions) ->
             cmd.current_dir(p);
         }
     }
+    // every command the agent runs inherits this marker; the app uses it to show
+    // only agent-started processes in the status bar (survives `&` + reparenting)
+    cmd.env("HINA_SESSION", tab);
     if let Some(gate) = opts.gate.as_ref() {
         cmd.env("PI_DESKTOP_GATE", gate);
     }
