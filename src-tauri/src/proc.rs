@@ -329,3 +329,197 @@ mod tests {
         assert_eq!(buf.lock().unwrap().len(), MAX_OUTPUT);
     }
 }
+
+// ── auto-detected processes (started outside the app) ────────────────────────
+
+#[derive(Serialize, Clone)]
+pub struct ExternalProc {
+    pub pid: u32,
+    pub command: String,
+    pub cwd: String,
+    pub started_ms: u64,
+    pub rss_kb: u64,
+}
+
+fn read_cmdline(pid: u32) -> String {
+    std::fs::read(format!("/proc/{pid}/cmdline"))
+        .map(|b| {
+            b.split(|c| *c == 0)
+                .filter(|s| !s.is_empty())
+                .map(|s| String::from_utf8_lossy(s).into_owned())
+                .collect::<Vec<_>>()
+                .join(" ")
+        })
+        .unwrap_or_default()
+}
+
+fn read_cwd(pid: u32) -> Option<String> {
+    std::fs::read_link(format!("/proc/{pid}/cwd"))
+        .ok()
+        .map(|p| p.to_string_lossy().into_owned())
+}
+
+/// start time (ms since epoch) from /proc/<pid>/stat field 22 (clock ticks since boot)
+fn started_ms(pid: u32) -> Option<u64> {
+    let stat = std::fs::read_to_string(format!("/proc/{pid}/stat")).ok()?;
+    let after = stat.rsplit_once(')')?.1;
+    let ticks: u64 = after.split_whitespace().nth(19)?.parse().ok()?;
+    let btime = std::fs::read_to_string("/proc/stat")
+        .ok()?
+        .lines()
+        .find(|l| l.starts_with("btime"))?
+        .split_whitespace()
+        .nth(1)?
+        .parse::<u64>()
+        .ok()?;
+    let hz = 100u64; // USER_HZ on Linux
+    Some((btime * 1000) + (ticks * 1000 / hz))
+}
+
+fn rss_kb(pid: u32) -> u64 {
+    std::fs::read_to_string(format!("/proc/{pid}/status"))
+        .ok()
+        .and_then(|s| {
+            s.lines()
+                .find(|l| l.starts_with("VmRSS:"))
+                .and_then(|l| l.split_whitespace().nth(1).and_then(|v| v.parse().ok()))
+        })
+        .unwrap_or(0)
+}
+
+fn descendants_of(root: u32) -> Vec<u32> {
+    let mut out = Vec::new();
+    let Ok(entries) = std::fs::read_dir("/proc") else {
+        return out;
+    };
+    for entry in entries.flatten() {
+        let Ok(pid) = entry.file_name().to_string_lossy().parse::<u32>() else {
+            continue;
+        };
+        let Ok(stat) = std::fs::read_to_string(format!("/proc/{pid}/stat")) else {
+            continue;
+        };
+        let Some(after) = stat.rsplit_once(')').map(|(_, a)| a) else {
+            continue;
+        };
+        if let Some(ppid) = after.split_whitespace().nth(1).and_then(|v| v.parse::<u32>().ok()) {
+            if ppid == root {
+                out.push(pid);
+            }
+        }
+    }
+    out
+}
+
+/// Long-running processes living in `cwd` that the app did not start itself.
+/// Lets the user watch watchers/dev-servers the agent (or a terminal) left running.
+pub fn scan(cwd: Option<String>, min_age_ms: u64) -> Vec<ExternalProc> {
+    let me = std::process::id();
+    let roots: Vec<u32> = {
+        let mut v = vec![me];
+        v.extend(descendants_of(me));
+        v
+    };
+    let now = now_ms();
+    let mut out: Vec<ExternalProc> = Vec::new();
+    let Ok(entries) = std::fs::read_dir("/proc") else {
+        return out;
+    };
+    for entry in entries.flatten() {
+        let Ok(pid) = entry.file_name().to_string_lossy().parse::<u32>() else {
+            continue;
+        };
+        // never report the app or its own children (those are `proc_*` entries)
+        if roots.contains(&pid) {
+            continue;
+        }
+        let command = read_cmdline(pid);
+        if command.is_empty() {
+            continue;
+        }
+        // skip short-lived helpers/kernel threads
+        let started = started_ms(pid).unwrap_or(now);
+        if now.saturating_sub(started) < min_age_ms {
+            continue;
+        }
+        let proc_cwd = read_cwd(pid).unwrap_or_default();
+        if let Some(want) = cwd.as_ref() {
+            if !want.is_empty() && !proc_cwd.starts_with(want.as_str()) {
+                continue;
+            }
+        }
+        out.push(ExternalProc {
+            pid,
+            command: command.chars().take(160).collect(),
+            cwd: proc_cwd,
+            started_ms: started,
+            rss_kb: rss_kb(pid),
+        });
+    }
+    out.sort_by(|a, b| a.started_ms.cmp(&b.started_ms));
+    out.truncate(12);
+    out
+}
+
+pub fn kill_external(pid: u32) -> Result<(), String> {
+    // only plain SIGTERM via kill(2) through the shell, no libc dependency
+    let status = std::process::Command::new("kill")
+        .arg("-TERM")
+        .arg(pid.to_string())
+        .status()
+        .map_err(|e| format!("failed to signal: {e}"))?;
+    if status.success() {
+        Ok(())
+    } else {
+        Err("kill failed (process gone?)".into())
+    }
+}
+
+#[cfg(test)]
+mod scan_tests {
+    use super::*;
+
+    #[test]
+    fn scan_skips_our_own_children() {
+        // children of the app are managed by proc_*, never reported as external
+        let mut child = std::process::Command::new("sh")
+            .args(["-c", "sleep 2"])
+            .current_dir("/tmp")
+            .spawn()
+            .unwrap();
+        std::thread::sleep(std::time::Duration::from_millis(200));
+        let found = scan(Some("/tmp".into()), 0);
+        assert!(!found.iter().any(|p| p.pid == child.id()));
+        let _ = child.kill();
+        let _ = child.wait();
+    }
+
+    #[test]
+    fn scan_finds_a_detached_process_in_the_project_dir() {
+        // setsid detaches, so the process is no longer our child (like a `nohup … &`)
+        let _ = std::process::Command::new("sh")
+            .args(["-c", "cd /tmp && setsid sleep 3 >/dev/null 2>&1 &"])
+            .status();
+        std::thread::sleep(std::time::Duration::from_millis(600));
+        let found = scan(Some("/tmp".into()), 0);
+        assert!(
+            found.iter().any(|p| p.command.contains("sleep 3")),
+            "expected a detached sleep in {:?}",
+            found.iter().map(|p| p.command.clone()).collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn scan_ignores_processes_outside_the_project_dir() {
+        let mut child = std::process::Command::new("sh")
+            .args(["-c", "sleep 2"])
+            .current_dir("/tmp")
+            .spawn()
+            .unwrap();
+        std::thread::sleep(std::time::Duration::from_millis(200));
+        let found = scan(Some("/usr".into()), 0);
+        assert!(!found.iter().any(|p| p.pid == child.id()));
+        let _ = child.kill();
+        let _ = child.wait();
+    }
+}

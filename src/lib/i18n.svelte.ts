@@ -369,6 +369,9 @@ const en = {
   "toast.procFailed": "could not start: {error}",
   "proc.title": "processes",
   "proc.panel": "open the process panel",
+  "proc.detected": "detected",
+  "proc.killDetected": "stop this process",
+  "toast.procKilled": "process {pid} stopped",
   "proc.empty": "nothing running — start one with /bg <command>",
   "proc.command": "command…",
   "proc.start": "start",
@@ -755,6 +758,10 @@ const ptBR: Record<keyof typeof en, string> = {
   "toast.procFailed": "não consegui iniciar: {error}",
   "proc.title": "processos",
   "proc.panel": "abrir o painel de processos",
+  "proc.detected": "detectado",
+  "proc.killDetected": "encerrar este processo",
+  "toast.procKilled": "processo {pid} encerrado",
+
 
   "proc.empty": "nada rodando — comece com /bg <comando>",
   "proc.command": "comando…",

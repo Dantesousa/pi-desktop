@@ -72,6 +72,16 @@ fn channel() -> &'static str {
 }
 
 #[tauri::command]
+fn proc_scan(cwd: Option<String>, min_age_ms: Option<u64>) -> Vec<proc::ExternalProc> {
+    proc::scan(cwd, min_age_ms.unwrap_or(10_000))
+}
+
+#[tauri::command]
+fn proc_kill_external(pid: u32) -> Result<(), String> {
+    proc::kill_external(pid)
+}
+
+#[tauri::command]
 fn proc_start(
     app: tauri::AppHandle,
     state: tauri::State<proc::ProcState>,
@@ -433,6 +443,8 @@ pub fn run() {
             pi_self_update,
             open_external,
             build_info,
+            proc_scan,
+            proc_kill_external,
             proc_start,
             proc_list,
             proc_output,

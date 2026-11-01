@@ -28,6 +28,9 @@ export const api = {
   stopAll: () => invoke<void>("pi_stop_all"),
   status: (tab: string) => invoke<any>("pi_status", { tab }),
   resolveBin: () => invoke<string>("pi_resolve_bin"),
+  procScan: async (cwd: string | null, minAgeMs = 10000) =>
+    camel(await invoke<any[]>("proc_scan", { cwd, minAgeMs })),
+  procKillExternal: (pid: number) => invoke<void>("proc_kill_external", { pid }),
   procStart: async (command: string, cwd: string | null, notify = true) =>
     camel(await invoke<any>("proc_start", { command, cwd, notify })),
   procList: async () => camel(await invoke<any[]>("proc_list")),

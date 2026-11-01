@@ -272,6 +272,7 @@ class HinaState {
   showBrowser = $state(false);
   showProcs = $state(false);
   procs = $state<any[]>([]);
+  externals = $state<any[]>([]);
   procId = $state<string | null>(null);
   procText = $state("");
   browser = $state<{
@@ -502,6 +503,10 @@ class HinaState {
         { id: "p2", command: "cargo watch -x check", cwd: "/home/dante/proj", status: "running", exitCode: null, startedMs: now - 15000, endedMs: null, notify: true },
         { id: "p3", command: "python -m http.server 9000", cwd: "/tmp", status: "failed", exitCode: 1, startedMs: now - 300000, endedMs: now - 240000, notify: false },
       ];
+      this.externals = [
+        { pid: 4242, command: "vite --host 0.0.0.0", cwd: "/home/dante/proj", startedMs: now - 240000, rssKb: 180000 },
+        { pid: 4243, command: "cargo watch -x check", cwd: "/home/dante/proj", startedMs: now - 61000, rssKb: 92000 },
+      ];
     }
     const panel = params.get("panel");
     if (panel === "bash") this.showBash = true;
@@ -668,6 +673,7 @@ class HinaState {
   async refreshProcs() {
     try {
       this.procs = await api.procList();
+      this.externals = await api.procScan(this.cwd, 10000);
       if (this.procId && !this.procs.some((p) => p.id === this.procId)) this.procId = null;
       if (this.showProcs && this.procId) this.procText = await api.procOutput(this.procId, 200);
     } catch {
@@ -717,6 +723,16 @@ class HinaState {
       this.procText = await api.procOutput(id, 200);
     } catch {
       this.procText = "";
+    }
+  }
+
+  async killExternal(pid: number) {
+    try {
+      await api.procKillExternal(pid);
+      this.toast(t("toast.procKilled", { pid }), "ok");
+      await this.refreshProcs();
+    } catch (e: any) {
+      this.toast(String(e?.message ?? e), "error");
     }
   }
 
@@ -896,15 +912,6 @@ class HinaState {
     this.theme = theme;
     localStorage.setItem("pi.theme", theme);
     this.applyTheme();
-    const params = new URLSearchParams(location.search);
-    if (params.get("fake") === "procs") {
-      const now = Date.now();
-      this.procs = [
-        { id: "p1", command: "npm run dev", cwd: "/home/dante/proj", status: "running", exitCode: null, startedMs: now - 92000, endedMs: null, notify: true },
-        { id: "p2", command: "cargo watch -x check", cwd: "/home/dante/proj", status: "running", exitCode: null, startedMs: now - 15000, endedMs: null, notify: true },
-        { id: "p3", command: "python -m http.server 9000", cwd: "/tmp", status: "failed", exitCode: 1, startedMs: now - 300000, endedMs: now - 240000, notify: false },
-      ];
-    }
     const panel = params.get("panel");
     if (panel === "bash") this.showBash = true;
     if (panel === "fork") this.showFork = true;
@@ -936,15 +943,6 @@ class HinaState {
     this.accent = hex;
     localStorage.setItem("pi.accent", hex);
     this.applyTheme();
-    const params = new URLSearchParams(location.search);
-    if (params.get("fake") === "procs") {
-      const now = Date.now();
-      this.procs = [
-        { id: "p1", command: "npm run dev", cwd: "/home/dante/proj", status: "running", exitCode: null, startedMs: now - 92000, endedMs: null, notify: true },
-        { id: "p2", command: "cargo watch -x check", cwd: "/home/dante/proj", status: "running", exitCode: null, startedMs: now - 15000, endedMs: null, notify: true },
-        { id: "p3", command: "python -m http.server 9000", cwd: "/tmp", status: "failed", exitCode: 1, startedMs: now - 300000, endedMs: now - 240000, notify: false },
-      ];
-    }
     const panel = params.get("panel");
     if (panel === "bash") this.showBash = true;
     if (panel === "fork") this.showFork = true;
@@ -958,15 +956,6 @@ class HinaState {
     this.chatFont = size;
     localStorage.setItem("pi.chatFont", String(size));
     this.applyTheme();
-    const params = new URLSearchParams(location.search);
-    if (params.get("fake") === "procs") {
-      const now = Date.now();
-      this.procs = [
-        { id: "p1", command: "npm run dev", cwd: "/home/dante/proj", status: "running", exitCode: null, startedMs: now - 92000, endedMs: null, notify: true },
-        { id: "p2", command: "cargo watch -x check", cwd: "/home/dante/proj", status: "running", exitCode: null, startedMs: now - 15000, endedMs: null, notify: true },
-        { id: "p3", command: "python -m http.server 9000", cwd: "/tmp", status: "failed", exitCode: 1, startedMs: now - 300000, endedMs: now - 240000, notify: false },
-      ];
-    }
     const panel = params.get("panel");
     if (panel === "bash") this.showBash = true;
     if (panel === "fork") this.showFork = true;

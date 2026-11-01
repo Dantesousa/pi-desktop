@@ -10,7 +10,7 @@
   }
 </script>
 
-{#if app.procs.length}
+{#if app.procs.length || app.externals.length}
   <div class="procbar">
     <span class="label">{t("proc.title")}</span>
     {#each app.procs as p (p.id)}
@@ -30,6 +30,14 @@
           {#if p.status === "running"}{elapsed(p)}{:else if p.exitCode != null}exit {p.exitCode}{/if}
         </span>
       </button>
+    {/each}
+    {#each app.externals as p (p.pid)}
+      <span class="chip ext" title={`pid ${p.pid}\n${p.command}\n${p.cwd}\n${Math.round(p.rssKb / 1024)} MB`}>
+        <span class="dot live"></span>
+        <span class="cmd">{p.command}</span>
+        <span class="time">{elapsed({ startedMs: p.startedMs, endedMs: null })}</span>
+        <button class="kill" title={t("proc.killDetected")} onclick={() => app.killExternal(p.pid)}>×</button>
+      </span>
     {/each}
     <span class="spacer"></span>
     <button class="mini" title={t("proc.panel")} onclick={() => app.toggleProcs()}>⌃</button>
@@ -72,6 +80,23 @@
   }
   .chip:hover {
     background: var(--panel-2);
+  }
+  .chip.ext {
+    border-style: dashed;
+    background: transparent;
+    opacity: 0.85;
+  }
+  .chip.ext .kill {
+    border: none;
+    background: none;
+    padding: 0 2px;
+    color: var(--text-faint);
+    font-size: 12px;
+    line-height: 1;
+  }
+  .chip.ext .kill:hover {
+    background: none;
+    color: var(--red);
   }
   .chip.done {
     opacity: 0.6;
