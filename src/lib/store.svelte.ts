@@ -912,13 +912,6 @@ class HinaState {
     this.theme = theme;
     localStorage.setItem("pi.theme", theme);
     this.applyTheme();
-    const panel = params.get("panel");
-    if (panel === "bash") this.showBash = true;
-    if (panel === "fork") this.showFork = true;
-    if (panel === "tree") this.showTree = true;
-    if (panel === "memory") this.showMemory = true;
-    if (panel === "browser") this.toggleBrowser(true);
-    if (panel === "procs") this.toggleProcs(true);
   }
 
   private applyTheme() {
@@ -943,26 +936,12 @@ class HinaState {
     this.accent = hex;
     localStorage.setItem("pi.accent", hex);
     this.applyTheme();
-    const panel = params.get("panel");
-    if (panel === "bash") this.showBash = true;
-    if (panel === "fork") this.showFork = true;
-    if (panel === "tree") this.showTree = true;
-    if (panel === "memory") this.showMemory = true;
-    if (panel === "browser") this.toggleBrowser(true);
-    if (panel === "procs") this.toggleProcs(true);
   }
 
   setChatFont(size: number) {
     this.chatFont = size;
     localStorage.setItem("pi.chatFont", String(size));
     this.applyTheme();
-    const panel = params.get("panel");
-    if (panel === "bash") this.showBash = true;
-    if (panel === "fork") this.showFork = true;
-    if (panel === "tree") this.showTree = true;
-    if (panel === "memory") this.showMemory = true;
-    if (panel === "browser") this.toggleBrowser(true);
-    if (panel === "procs") this.toggleProcs(true);
   }
 
   // ── rpc plumbing ──────────────────────────────────────────────────────
