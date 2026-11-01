@@ -6,6 +6,7 @@ mod hub;
 mod mcp;
 mod memory;
 mod pi;
+mod proc;
 
 use pi::{PiState, StartOptions};
 use tauri::menu::{Menu, MenuItem};
@@ -68,6 +69,42 @@ pub struct BuildInfo {
 
 fn channel() -> &'static str {
     option_env!("PI_CHANNEL").unwrap_or("dev")
+}
+
+#[tauri::command]
+fn proc_start(
+    app: tauri::AppHandle,
+    state: tauri::State<proc::ProcState>,
+    command: String,
+    cwd: Option<String>,
+    notify: Option<bool>,
+) -> Result<proc::BgProc, String> {
+    proc::start(&app, &state, &command, cwd, notify.unwrap_or(true))
+}
+
+#[tauri::command]
+fn proc_list(state: tauri::State<proc::ProcState>) -> Vec<proc::BgProc> {
+    proc::list(&state)
+}
+
+#[tauri::command]
+fn proc_output(app: tauri::AppHandle, id: String, lines: Option<usize>) -> String {
+    proc::output_tail(&app, &id, lines.unwrap_or(120))
+}
+
+#[tauri::command]
+fn proc_stop(state: tauri::State<proc::ProcState>, id: String) -> Result<(), String> {
+    proc::stop(&state, &id)
+}
+
+#[tauri::command]
+fn proc_remove(state: tauri::State<proc::ProcState>, id: String) -> Result<(), String> {
+    proc::remove(&state, &id)
+}
+
+#[tauri::command]
+fn proc_set_notify(state: tauri::State<proc::ProcState>, id: String, notify: bool) {
+    proc::set_notify(&state, &id, notify)
 }
 
 #[tauri::command]
@@ -384,6 +421,7 @@ pub fn run() {
                 .build(),
         )
         .manage(PiState::default())
+        .manage(proc::ProcState::default())
         .invoke_handler(tauri::generate_handler![
             pi_start,
             pi_send,
@@ -395,6 +433,12 @@ pub fn run() {
             pi_self_update,
             open_external,
             build_info,
+            proc_start,
+            proc_list,
+            proc_output,
+            proc_stop,
+            proc_remove,
+            proc_set_notify,
             file_snapshot,
             file_restore,
             pi_stop_all,

@@ -270,6 +270,10 @@ class HinaState {
   modelHidden = $state<string[]>(JSON.parse(localStorage.getItem("pi.modelHidden") || "[]"));
   showBash = $state(false);
   showBrowser = $state(false);
+  showProcs = $state(false);
+  procs = $state<any[]>([]);
+  procId = $state<string | null>(null);
+  procText = $state("");
   browser = $state<{
     enabled: boolean;
     url: string;
@@ -296,6 +300,7 @@ class HinaState {
   private listeners: UnlistenFn[] = [];
   private pollTimer: number | null = null;
   private browserTimer: number | null = null;
+  private procTimer: number | null = null;
   private waiting = new Map<string, { resolve: (v: any) => void; reject: (e: any) => void; timer: number }>();
   private booted = false;
   private notificationsAllowed: boolean | null = null;
@@ -315,6 +320,7 @@ class HinaState {
       { name: "safe", description: t("cmd.safe") },
       { name: "new", description: t("cmd.new") },
       { name: "stop", description: t("cmd.stop") },
+      { name: "bg", description: t("cmd.bg") },
     ];
   }
 
@@ -335,6 +341,15 @@ class HinaState {
       case "stop":
         await this.abort();
         return true;
+      case "bg": {
+        const command = raw.trim().slice(3).trim();
+        if (!command) {
+          this.toggleProcs(true);
+          return true;
+        }
+        await this.startProc(command, true);
+        return true;
+      }
       default:
         return false;
     }
@@ -484,6 +499,7 @@ class HinaState {
     if (panel === "tree") this.showTree = true;
     if (panel === "memory") this.showMemory = true;
     if (panel === "browser") this.toggleBrowser(true);
+    if (panel === "procs") this.toggleProcs(true);
     try {
       const forced = new URLSearchParams(location.search).get("channel");
       this.build =
@@ -535,6 +551,10 @@ class HinaState {
             this.waiting.delete(key);
           }
         }
+      }),
+      await listen<any>("proc:exited", (e) => {
+        void this.refreshProcs();
+        if (e.payload?.notify) void this.notifyProcExit(e.payload);
       }),
       await listen<any>("quick-ask", () => {
         this.focusToken++;
@@ -611,6 +631,102 @@ class HinaState {
       return await api.status(tabId);
     } catch {
       return null;
+    }
+  }
+
+  // ── background processes ───────────────────────────────────────────────
+  toggleProcs(open = !this.showProcs) {
+    this.showProcs = open;
+    if (open) {
+      void this.refreshProcs();
+      if (this.procTimer == null) {
+        this.procTimer = window.setInterval(() => {
+          if (this.showProcs) void this.refreshProcs();
+        }, 1500);
+      }
+    } else if (this.procTimer != null) {
+      clearInterval(this.procTimer);
+      this.procTimer = null;
+    }
+  }
+
+  async refreshProcs() {
+    try {
+      this.procs = await api.procList();
+      if (this.procId && !this.procs.some((p) => p.id === this.procId)) this.procId = null;
+      if (this.procId) this.procText = await api.procOutput(this.procId, 200);
+    } catch {
+      /* ignore */
+    }
+  }
+
+  async startProc(command: string, notify = true) {
+    try {
+      const p = await api.procStart(command, this.cwd, notify);
+      this.toast(t("toast.procStarted", { command: command.slice(0, 40) }), "ok");
+      this.toggleProcs(true);
+      await this.refreshProcs();
+      this.procId = p?.id ?? this.procId;
+      return p;
+    } catch (e: any) {
+      this.toast(t("toast.procFailed", { error: e?.message ?? e }), "error");
+      return null;
+    }
+  }
+
+  async stopProc(id: string) {
+    try {
+      await api.procStop(id);
+      await this.refreshProcs();
+    } catch (e: any) {
+      this.toast(String(e?.message ?? e), "error");
+    }
+  }
+
+  async removeProc(id: string) {
+    try {
+      await api.procRemove(id);
+      if (this.procId === id) {
+        this.procId = null;
+        this.procText = "";
+      }
+      await this.refreshProcs();
+    } catch (e: any) {
+      this.toast(String(e?.message ?? e), "error");
+    }
+  }
+
+  async selectProc(id: string) {
+    this.procId = id;
+    try {
+      this.procText = await api.procOutput(id, 200);
+    } catch {
+      this.procText = "";
+    }
+  }
+
+  async toggleProcNotify(id: string, notify: boolean) {
+    await api.procSetNotify(id, notify);
+    await this.refreshProcs();
+  }
+
+  /** Tells the agent a background process it should care about has exited. */
+  private async notifyProcExit(payload: any) {
+    const tab = this.active;
+    if (!tab) return;
+    const code = payload?.code;
+    const tail = String(payload?.tail ?? "").trim();
+    const message = [
+      `[background] \`${payload?.command ?? "process"}\` exited with code ${code ?? "?"}.`,
+      tail ? `Last output:\n\n\`\`\`\n${tail.slice(-3000)}\n\`\`\`` : "",
+      "Decide whether something needs to be fixed or restarted, and tell the user briefly.",
+    ]
+      .filter(Boolean)
+      .join("\n\n");
+    try {
+      await this.send(tab.id, { type: "prompt", message });
+    } catch {
+      /* ignore */
     }
   }
 
@@ -771,6 +887,7 @@ class HinaState {
     if (panel === "tree") this.showTree = true;
     if (panel === "memory") this.showMemory = true;
     if (panel === "browser") this.toggleBrowser(true);
+    if (panel === "procs") this.toggleProcs(true);
   }
 
   private applyTheme() {
@@ -801,6 +918,7 @@ class HinaState {
     if (panel === "tree") this.showTree = true;
     if (panel === "memory") this.showMemory = true;
     if (panel === "browser") this.toggleBrowser(true);
+    if (panel === "procs") this.toggleProcs(true);
   }
 
   setChatFont(size: number) {
@@ -813,6 +931,7 @@ class HinaState {
     if (panel === "tree") this.showTree = true;
     if (panel === "memory") this.showMemory = true;
     if (panel === "browser") this.toggleBrowser(true);
+    if (panel === "procs") this.toggleProcs(true);
   }
 
   // ── rpc plumbing ──────────────────────────────────────────────────────

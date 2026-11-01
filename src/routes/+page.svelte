@@ -15,6 +15,7 @@
   import BashPanel from "$lib/components/BashPanel.svelte";
   import SessionTools from "$lib/components/SessionTools.svelte";
   import BrowserPanel from "$lib/components/BrowserPanel.svelte";
+  import ProcPanel from "$lib/components/ProcPanel.svelte";
 
   let scroller = $state<HTMLElement | null>(null);
   let stick = $state(true);
@@ -48,6 +49,9 @@
     } else if (mod && e.shiftKey && e.key.toLowerCase() === "f") {
       e.preventDefault();
       app.showFork = !app.showFork;
+    } else if (mod && e.shiftKey && e.key.toLowerCase() === "b") {
+      e.preventDefault();
+      app.toggleProcs();
     } else if (mod && e.shiftKey && e.key.toLowerCase() === "g") {
       e.preventDefault();
       app.showTree = !app.showTree;
@@ -169,6 +173,7 @@
 <BashPanel />
 <SessionTools />
 <BrowserPanel />
+<ProcPanel />
 
 <div class="toasts">
   {#each app.toasts as t (t.id)}

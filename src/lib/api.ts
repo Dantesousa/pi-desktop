@@ -28,6 +28,14 @@ export const api = {
   stopAll: () => invoke<void>("pi_stop_all"),
   status: (tab: string) => invoke<any>("pi_status", { tab }),
   resolveBin: () => invoke<string>("pi_resolve_bin"),
+  procStart: async (command: string, cwd: string | null, notify = true) =>
+    camel(await invoke<any>("proc_start", { command, cwd, notify })),
+  procList: async () => camel(await invoke<any[]>("proc_list")),
+  procOutput: (id: string, lines = 120) => invoke<string>("proc_output", { id, lines }),
+  procStop: (id: string) => invoke<void>("proc_stop", { id }),
+  procRemove: (id: string) => invoke<void>("proc_remove", { id }),
+  procSetNotify: (id: string, notify: boolean) => invoke<void>("proc_set_notify", { id, notify }),
+
   buildInfo: async () => camel(await invoke<any>("build_info")),
   openExternal: (url: string) => invoke<void>("open_external", { url }),
   permissionExtension: () => invoke<string | null>("pi_permission_extension"),
