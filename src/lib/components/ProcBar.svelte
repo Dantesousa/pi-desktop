@@ -11,6 +11,14 @@
 </script>
 
 {#if app.procs.length || app.externals.length}
+  {#if app.procBarCollapsed}
+    <button class="collapsed" onclick={() => app.toggleProcBar(false)}>
+      ▸ {app.procs.length + app.externals.length} {t("proc.title")}
+      {#if app.procs.some((p) => p.status === "running") || app.externals.length}
+        <span class="dot live"></span>
+      {/if}
+    </button>
+  {:else}
   <div class="procbar">
     <span class="label">{t("proc.title")}</span>
     {#each app.procs as p (p.id)}
@@ -41,10 +49,30 @@
     {/each}
     <span class="spacer"></span>
     <button class="mini" title={t("proc.panel")} onclick={() => app.toggleProcs()}>⌃</button>
+    <button class="mini" title={t("proc.collapse")} onclick={() => app.toggleProcBar(true)}>▾</button>
   </div>
+  {/if}
 {/if}
 
 <style>
+  .collapsed {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    border: none;
+    border-top: 1px solid var(--border-soft);
+    border-radius: 0;
+    background: var(--bg-2);
+    color: var(--text-faint);
+    font-size: 10.5px;
+    padding: 3px 14px;
+    text-align: left;
+  }
+  .collapsed:hover {
+    background: var(--panel);
+    color: var(--text-dim);
+  }
   .procbar {
     display: flex;
     align-items: center;

@@ -8,6 +8,7 @@ import { api } from "./api";
 import { t, initLocale, setLocale as setLocaleImpl, locale, type LocaleId } from "./i18n.svelte";
 import { extractImages } from "./media";
 import type { Chip, Msg, ModelInfo, Part, SessionInfo, SkillInfo } from "./types";
+import { streamedContent } from "./partialJson";
 
 const uid = () => Math.random().toString(36).slice(2, 10);
 
@@ -273,6 +274,7 @@ class HinaState {
   showProcs = $state(false);
   procs = $state<any[]>([]);
   externals = $state<any[]>([]);
+  procBarCollapsed = $state(localStorage.getItem("pi.procBar") === "collapsed");
   localServers = $state<any[]>([]);
   scanningLocal = $state(false);
   procId = $state<string | null>(null);
@@ -510,6 +512,30 @@ class HinaState {
         { pid: 4243, command: "cargo watch -x check", cwd: "/home/dante/proj", startedMs: now - 61000, rssKb: 92000 },
       ];
     }
+    if (params.get("fake") === "write") {
+      if (!this.tabs.length) this.newTab();
+      const m = newMsg({
+        key: "fake-write",
+        role: "assistant",
+        ts: Date.now(),
+        streaming: true,
+        model: "logfare/glm-5.3",
+        parts: [
+          newPart({ ci: 0, kind: "text", text: "Criando o arquivo de configuracao…" }),
+          newPart({
+            ci: 1,
+            kind: "tool",
+            id: "t1",
+            name: "write",
+            args: { path: "/home/dante/proj/config.toml" },
+            running: true,
+            liveText:
+              '[server]\nhost = "127.0.0.1"\nport = 8080\n\n[logging]\nlevel = "debug"\nfile = "/var/log/app.log"\n\n[limits]\nmax_connections = 256\nrequest_timeout_ms = 30000\n',
+          }),
+        ],
+      });
+      this.messages.push(m);
+    }
     const panel = params.get("panel");
     if (panel === "bash") this.showBash = true;
     if (panel === "fork") this.showFork = true;
@@ -670,6 +696,11 @@ class HinaState {
       clearInterval(this.procTimer);
       this.procTimer = null;
     }
+  }
+
+  toggleProcBar(collapsed = !this.procBarCollapsed) {
+    this.procBarCollapsed = collapsed;
+    localStorage.setItem("pi.procBar", collapsed ? "collapsed" : "open");
   }
 
   async refreshProcs() {
@@ -1953,6 +1984,12 @@ class HinaState {
           p.id = ev.id ?? p.id;
           p.name = ev.toolName ?? p.name;
           tab.activity = t("activity.preparing", { tool: ev.toolName });
+        } else if (ev.type === "toolcall_delta") {
+          const p: any = tab.part(msg, ci, "tool");
+          p.rawArgs = (p.rawArgs ?? "") + (ev.delta ?? "");
+          const live = streamedContent(p.name ?? "", p.rawArgs);
+          if (live != null) p.liveText = live;
+          if (p.name) tab.activity = `escrevendo ${p.name}…`;
         } else if (ev.type === "toolcall_end" && ev.toolCall) {
           const p: any = tab.part(msg, ci, "tool");
           p.id = ev.toolCall.id;
@@ -1988,6 +2025,8 @@ class HinaState {
                 output: existing?.output,
                 isError: existing?.isError,
                 durationMs: existing?.durationMs,
+                liveText: existing?.liveText,
+                rawArgs: existing?.rawArgs,
                 running: existing ? existing.running : false,
               }),
             );

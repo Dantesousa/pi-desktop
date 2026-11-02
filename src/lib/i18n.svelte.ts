@@ -83,6 +83,7 @@ const en = {
   "msg.revertEdits": "edits",
   "msg.newFile": "(new file)",
   "tool.args": "arguments",
+  "tool.writing": "writing…",
   "tool.result": "result",
   "tool.imageN": "result {n}",
   "tool.all": "all",
@@ -377,6 +378,7 @@ const en = {
   "toast.procFailed": "could not start: {error}",
   "proc.title": "processes",
   "proc.panel": "open the process panel",
+  "proc.collapse": "collapse the bar",
   "proc.detected": "detected",
   "proc.killDetected": "stop this process",
   "toast.procKilled": "process {pid} stopped",
@@ -397,6 +399,8 @@ const en = {
   "proc.noOutput": "no output yet",
   "cmd.bg": "run a command in the background (e.g. /bg npm run dev)",
   "palette.showProcs": "Background processes",
+  "palette.expandBar": "Expand the process bar",
+  "palette.collapseBar": "Collapse the process bar",
   "palette.hideProcs": "Hide background processes",
   "toast.yoloOn": "YOLO mode on — no tool will ask for permission",
   "toast.yoloOff": "permission prompts restored",
@@ -486,6 +490,8 @@ const ptBR: Record<keyof typeof en, string> = {
   "msg.revertEdits": "edições",
   "msg.newFile": "(arquivo novo)",
   "tool.args": "argumentos",
+  "tool.writing": "escrevendo…",
+
   "tool.result": "resultado",
   "tool.imageN": "resultado {n}",
 
@@ -780,6 +786,8 @@ const ptBR: Record<keyof typeof en, string> = {
   "toast.procFailed": "não consegui iniciar: {error}",
   "proc.title": "processos",
   "proc.panel": "abrir o painel de processos",
+  "proc.collapse": "recolher a barra",
+
   "proc.detected": "detectado",
   "proc.killDetected": "encerrar este processo",
   "toast.procKilled": "processo {pid} encerrado",
@@ -804,6 +812,9 @@ const ptBR: Record<keyof typeof en, string> = {
   "proc.noOutput": "sem saída ainda",
   "cmd.bg": "rodar um comando em background (ex: /bg npm run dev)",
   "palette.showProcs": "Processos em background",
+  "palette.expandBar": "Expandir a barra de processos",
+  "palette.collapseBar": "Recolher a barra de processos",
+
   "palette.hideProcs": "Esconder processos em background",
 
 

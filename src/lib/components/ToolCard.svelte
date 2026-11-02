@@ -63,7 +63,9 @@
 
   let expandedByDefault = $state(false);
   $effect(() => {
-    if (diffs.length && !expandedByDefault) {
+    // open by itself for diffs, and while a write/edit content is streaming in
+    const streaming = !!part.running && !!part.liveText;
+    if (!expandedByDefault && (diffs.length || streaming)) {
       expandedByDefault = true;
       open = true;
     }
@@ -126,7 +128,12 @@
         </div>
       {/each}
 
-      {#if !diffs.length}
+      {#if part.running && part.liveText}
+        <div class="difflabel">
+          {part.name} · {t("tool.writing")} <span class="pulse"></span>
+        </div>
+        <div class="diff live"><pre>{part.liveText}</pre></div>
+      {:else if !diffs.length}
         <div class="label">{t("tool.args")}</div>
         <pre class="args">{argsJson}</pre>
       {/if}
@@ -288,6 +295,28 @@
     border: 1px solid var(--border-soft);
     cursor: zoom-in;
     background: var(--code-bg);
+  }
+  .diff.live pre {
+    margin: 0;
+    padding: 8px 10px;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    color: #b7c3d9;
+    font-family: var(--mono);
+    font-size: 11.5px;
+    line-height: 1.45;
+  }
+  .pulse {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: blink 1s ease-in-out infinite;
+  }
+  @keyframes blink {
+    0%, 100% { opacity: 0.25; }
+    50% { opacity: 1; }
   }
   .revertrow {
     display: flex;
