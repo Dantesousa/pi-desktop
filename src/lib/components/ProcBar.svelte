@@ -117,10 +117,16 @@
   .chip.ext .kill {
     border: none;
     background: none;
-    padding: 0 2px;
+    padding: 0;
+    width: 18px;
+    height: 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     color: var(--text-faint);
-    font-size: 12px;
+    font-size: 13px;
     line-height: 1;
+    border-radius: 5px;
   }
   .chip.ext .kill:hover {
     background: none;

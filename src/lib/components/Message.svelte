@@ -66,6 +66,14 @@
           <ToolCard {part} />
         {/if}
       {/each}
+      <button
+        class="bookmark"
+        class:on={app.isBookmarked(msg.key)}
+        title={t("bm.mark")}
+        onclick={() => app.toggleBookmark(msg)}
+      >
+        {app.isBookmarked(msg.key) ? "★" : "☆"}
+      </button>
       {#if msg.error}
         <div class="err">⚠ {msg.error}</div>
       {/if}
@@ -79,6 +87,32 @@
     gap: 10px;
     padding: 9px 0;
     align-items: flex-start;
+  }
+  .row {
+    position: relative;
+  }
+  .row:hover .bookmark {
+    opacity: 1;
+  }
+  .bookmark {
+    position: absolute;
+    top: 6px;
+    right: -2px;
+    opacity: 0;
+    border: none;
+    background: none;
+    padding: 0 4px;
+    font-size: 11px;
+    color: var(--text-faint);
+    transition: opacity 0.12s;
+  }
+  .bookmark.on {
+    opacity: 1;
+    color: var(--yellow);
+  }
+  .bookmark:hover {
+    background: none;
+    color: var(--text);
   }
   .row.user {
     justify-content: flex-end;

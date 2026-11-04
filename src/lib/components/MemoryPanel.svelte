@@ -286,6 +286,35 @@
     return skillSources.find((s) => s.slug === skill.name);
   }
 
+  async function previewSkill(skill: any) {
+    hubBusy = true;
+    try {
+      const diff = await api.hubSkillPreview(skill.name);
+      if (!diff.length) {
+        app.toast(t("mem.skillUpToDate", { name: skill.name }), "ok");
+        return;
+      }
+      const list = diff
+        .slice(0, 8)
+        .map((d: any) => `${d.status === "added" ? "+" : d.status === "removed" ? "-" : "~"} ${d.path}`)
+        .join("\n");
+      const ok = await app.askConfirm({
+        title: t("mem.skillUpdateTitle", { name: skill.name }),
+        message: `${diff.length} ${t("mem.skillUpdateFiles")}\n\n${list}${diff.length > 8 ? "\n…" : ""}`,
+        confirmLabel: t("mem.install"),
+      });
+      if (!ok) return;
+      const msg = await api.hubSkillSync(skill.name);
+      app.toast(`${skill.name}: ${msg}`, "ok");
+      skills = await api.skillsList();
+      skillSources = await api.hubSkillsSources();
+    } catch (e: any) {
+      app.toast(`preview failed: ${e?.message ?? e}`, "error");
+    } finally {
+      hubBusy = false;
+    }
+  }
+
   async function syncSkill(skill: any) {
     hubBusy = true;
     try {
@@ -686,7 +715,7 @@
               {#if src}<span class="faint small mono">{src.repo}</span>{/if}
               <span class="spacer"></span>
               {#if src}
-                <button class="mini" title={t("mem.syncSkill")} onclick={() => syncSkill(s)} disabled={hubBusy}>
+                <button class="mini" title={t("mem.syncSkill")} onclick={() => previewSkill(s)} disabled={hubBusy}>
                   ⟳
                 </button>
               {/if}
@@ -738,8 +767,13 @@
   .close {
     flex: 0 0 auto;
     align-self: flex-start;
-    margin: 6px 6px 0 2px;
-    padding: 0 6px;
+    margin: 5px 5px 0 2px;
+    width: 24px;
+    height: 24px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
   }
   .tab {
     white-space: nowrap;

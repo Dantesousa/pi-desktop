@@ -111,8 +111,13 @@
   }
   .x {
     color: var(--text-faint);
-    padding: 0 2px;
-    border-radius: 4px;
+    padding: 0;
+    width: 18px;
+    height: 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 5px;
     font-size: 13px;
     line-height: 1;
   }

@@ -36,6 +36,7 @@ pub struct StartOptions {
     pub session: Option<String>,
     pub no_session: Option<bool>,
     pub gate: Option<String>,
+    pub review_edits: Option<bool>,
     pub extra_args: Option<Vec<String>>,
 }
 
@@ -143,6 +144,10 @@ pub fn start(app: &AppHandle, state: &PiState, tab: &str, opts: StartOptions) ->
     if let Some(gate) = opts.gate.as_ref() {
         cmd.env("PI_DESKTOP_GATE", gate);
     }
+    cmd.env(
+        "PI_DESKTOP_REVIEW_EDITS",
+        if opts.review_edits.unwrap_or(true) { "1" } else { "0" },
+    );
     cmd.env("FORCE_COLOR", "0");
     cmd.env("NO_COLOR", "1");
     cmd.stdin(Stdio::piped())

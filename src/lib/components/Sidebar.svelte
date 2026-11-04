@@ -250,9 +250,14 @@
   }
   .act {
     border: none;
-    padding: 1px 3px;
-    font-size: 10px;
-    border-radius: 5px;
+    padding: 0;
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    border-radius: 6px;
     opacity: 0.75;
   }
   .act:hover {

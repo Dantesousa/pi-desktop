@@ -275,6 +275,19 @@ class HinaState {
   procs = $state<any[]>([]);
   externals = $state<any[]>([]);
   procBarCollapsed = $state(localStorage.getItem("pi.procBar") === "collapsed");
+  chatSearchOpen = $state(false);
+  chatQuery = $state("");
+  chatHitIndex = $state(0);
+  jumpKey = $state<string | null>(null);
+  canContinue = $state(false);
+  notifyPrefs = $state({
+    task: localStorage.getItem("pi.notify.task") !== "0",
+    proc: localStorage.getItem("pi.notify.proc") !== "0",
+    prompt: localStorage.getItem("pi.notify.prompt") !== "0",
+  });
+  bookmarks = $state<Record<string, any[]>>(
+    JSON.parse(localStorage.getItem("pi.bookmarks") || "{}"),
+  );
   localServers = $state<any[]>([]);
   scanningLocal = $state(false);
   procId = $state<string | null>(null);
@@ -296,6 +309,7 @@ class HinaState {
   appVersion = $state("0.1.1");
   build = $state<{ channel: string; version: string; commit: string; tag: string } | null>(null);
   gateMode = $state(localStorage.getItem("pi.gate") || "dangerous");
+  reviewEdits = $state(localStorage.getItem("pi.reviewEdits") !== "0");
   costLimit = $state(Number(localStorage.getItem("pi.costLimit") || "0"));
   theme = $state(localStorage.getItem("pi.theme") || "midnight");
   accent = $state(localStorage.getItem("pi.accent") || "");
@@ -597,7 +611,12 @@ class HinaState {
       }),
       await listen<any>("proc:exited", (e) => {
         void this.refreshProcs();
-        if (e.payload?.notify) void this.notifyProcExit(e.payload);
+        if (e.payload?.notify) {
+          void this.notifyProcExit(e.payload);
+          if (this.notifyPrefs.proc && !document.hasFocus()) {
+            void this.notifyDone(`${e.payload?.command ?? "process"} → exit ${e.payload?.code ?? "?"}`, "proc");
+          }
+        }
       }),
       await listen<any>("quick-ask", () => {
         this.focusToken++;
@@ -659,6 +678,7 @@ class HinaState {
         session: opts.session,
         noSession: false,
         gate: this.gateMode,
+        reviewEdits: this.reviewEdits,
       });
       tab.conn = "ready";
       const st = await this.procStatus(tab.id);
@@ -696,6 +716,72 @@ class HinaState {
       clearInterval(this.procTimer);
       this.procTimer = null;
     }
+  }
+
+  /** Messages that contain the current search text (case-insensitive). */
+  get chatHits(): string[] {
+    const q = this.chatQuery.trim().toLowerCase();
+    if (!q) return [];
+    return (this.active?.messages ?? [])
+      .filter((m) => {
+        const text = m.parts
+          .map((p: any) => (p.kind === "text" ? p.text : p.kind === "tool" ? p.output ?? "" : ""))
+          .join(" ")
+          .toLowerCase();
+        return text.includes(q);
+      })
+      .map((m) => m.key);
+  }
+
+  openChatSearch() {
+    this.chatSearchOpen = true;
+  }
+
+  closeChatSearch() {
+    this.chatSearchOpen = false;
+    this.chatQuery = "";
+    this.chatHitIndex = 0;
+  }
+
+  stepChatHit(delta: number) {
+    const hits = this.chatHits;
+    if (!hits.length) return;
+    this.chatHitIndex = (this.chatHitIndex + delta + hits.length) % hits.length;
+  }
+
+  get bookmarkScope(): string {
+    return this.active?.sessionId ?? this.active?.id ?? "local";
+  }
+
+  get currentBookmarks(): any[] {
+    return this.bookmarks[this.bookmarkScope] ?? [];
+  }
+
+  isBookmarked(key: string) {
+    return this.currentBookmarks.some((b) => b.key === key);
+  }
+
+  jumpToMessage(key: string) {
+    this.jumpKey = key;
+  }
+
+  toggleBookmark(msg: Msg) {
+    const scope = this.bookmarkScope;
+    const list = [...(this.bookmarks[scope] ?? [])];
+    const at = list.findIndex((b) => b.key === msg.key);
+    if (at >= 0) list.splice(at, 1);
+    else {
+      const text =
+        msg.parts
+          .map((p: any) => (p.kind === "text" ? p.text : ""))
+          .join(" ")
+          .replace(/\s+/g, " ")
+          .trim()
+          .slice(0, 120) || "(sem texto)";
+      list.push({ key: msg.key, label: `${msg.role}: ${text}`, ts: Date.now() });
+    }
+    this.bookmarks = { ...this.bookmarks, [scope]: list };
+    localStorage.setItem("pi.bookmarks", JSON.stringify(this.bookmarks));
   }
 
   toggleProcBar(collapsed = !this.procBarCollapsed) {
@@ -921,6 +1007,12 @@ class HinaState {
   async setYolo(on: boolean) {
     await this.setGate(on ? "off" : "dangerous");
     this.toast(on ? t("toast.yoloOn") : t("toast.yoloOff"), on ? "warn" : "ok");
+  }
+
+  async setReviewEdits(on: boolean) {
+    this.reviewEdits = on;
+    localStorage.setItem("pi.reviewEdits", on ? "1" : "0");
+    await this.setGate(this.gateMode);
   }
 
   async setGate(mode: string) {
@@ -1887,7 +1979,20 @@ class HinaState {
     }
   }
 
-  private async notifyDone(text: string) {
+  setNotifyPref(kind: "task" | "proc" | "prompt", on: boolean) {
+    this.notifyPrefs = { ...this.notifyPrefs, [kind]: on };
+    localStorage.setItem(`pi.notify.${kind}`, on ? "1" : "0");
+  }
+
+  async continueLastTurn() {
+    const tab = this.active;
+    if (!tab) return;
+    tab.canContinue = false;
+    await this.send(tab.id, { type: "prompt", message: "Continue from where you stopped." });
+  }
+
+  private async notifyDone(text: string, kind: "task" | "proc" | "prompt" = "task") {
+    if (!this.notifyPrefs[kind]) return;
     if (this.notificationsAllowed === null) {
       let granted = await isPermissionGranted();
       if (!granted) granted = (await requestPermission()) === "granted";
@@ -1895,7 +2000,9 @@ class HinaState {
     }
     if (!this.notificationsAllowed) return;
     try {
-      await sendNotification({ title: t("toast.taskDone"), body: text.slice(0, 160) });
+      const title =
+        kind === "task" ? t("toast.taskDone") : kind === "proc" ? t("toast.procDone") : t("toast.promptWaiting");
+      await sendNotification({ title, body: text.slice(0, 160) });
     } catch {
       /* ignore */
     }
@@ -1915,6 +2022,9 @@ class HinaState {
       return;
     }
     if (["select", "confirm", "input", "editor"].includes(rec.method)) {
+      if (this.notifyPrefs.prompt && !document.hasFocus()) {
+        void this.notifyDone(rec.title ?? t("toast.promptWaiting"), "prompt");
+      }
       this.requests.push({
         id: rec.id,
         method: rec.method,
@@ -2101,7 +2211,7 @@ class HinaState {
         this.syncSessionMeta(tab, false);
         const elapsed = tab.taskStartedAt ? Date.now() - tab.taskStartedAt : 0;
         tab.taskStartedAt = null;
-        if (wasWorking && elapsed > 12000 && !document.hasFocus()) {
+        if (wasWorking && elapsed > 12000 && !document.hasFocus() && this.notifyPrefs.task) {
           const last = [...tab.messages].reverse().find((m) => m.role === "assistant");
           const text = last?.parts.map((p: any) => p.text ?? "").join(" ") ?? t("toast.done");
           this.notifyDone(text.replace(/\s+/g, " ").trim() || t("toast.done"));

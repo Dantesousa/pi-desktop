@@ -365,6 +365,34 @@
         </div>
       {/if}
 
+      <label class="cb">
+        <input
+          type="checkbox"
+          checked={app.reviewEdits}
+          onchange={(e) => app.setReviewEdits((e.target as HTMLInputElement).checked)}
+        />
+        {t("top.reviewEdits")}
+      </label>
+
+      <div class="notifrow">
+        <span class="lbl">{t("top.notify")}</span>
+        <label class="cb">
+          <input type="checkbox" checked={app.notifyPrefs.task}
+            onchange={(e) => app.setNotifyPref("task", (e.target as HTMLInputElement).checked)} />
+          {t("top.notifyTask")}
+        </label>
+        <label class="cb">
+          <input type="checkbox" checked={app.notifyPrefs.proc}
+            onchange={(e) => app.setNotifyPref("proc", (e.target as HTMLInputElement).checked)} />
+          {t("top.notifyProc")}
+        </label>
+        <label class="cb">
+          <input type="checkbox" checked={app.notifyPrefs.prompt}
+            onchange={(e) => app.setNotifyPref("prompt", (e.target as HTMLInputElement).checked)} />
+          {t("top.notifyPrompt")}
+        </label>
+      </div>
+
       <div class="buildrow">
         <span class="faint">
           {app.build?.channel ?? "—"}
@@ -736,6 +764,18 @@
     font-family: var(--mono);
     font-size: 9px;
     color: var(--text-faint);
+  }
+  .notifrow {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    border-top: 1px solid var(--border-soft);
+    padding-top: 8px;
+    font-size: 10.5px;
+  }
+  .notifrow .lbl {
+    flex: 0 0 auto;
   }
   .localrow {
     display: flex;

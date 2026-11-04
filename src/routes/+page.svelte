@@ -27,6 +27,19 @@
     if (stick) queueMicrotask(() => scroller?.scrollTo({ top: scroller.scrollHeight }));
   });
 
+  $effect(() => {
+    const key = app.jumpKey;
+    if (!key || !scroller) return;
+    const el = scroller.querySelector(`[data-msg="${key}"]`) as HTMLElement | null;
+    if (el) {
+      stick = false;
+      el.scrollIntoView({ block: "center", behavior: "smooth" });
+      el.classList.add("hit");
+      setTimeout(() => el.classList.remove("hit"), 1600);
+    }
+    app.jumpKey = null;
+  });
+
   function onScroll() {
     if (!scroller) return;
     stick = scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 90;
@@ -37,6 +50,9 @@
     if (mod && e.key.toLowerCase() === "k") {
       e.preventDefault();
       app.showPalette = !app.showPalette;
+    } else if (mod && e.key.toLowerCase() === "f") {
+      e.preventDefault();
+      app.openChatSearch();
     } else if (mod && e.key.toLowerCase() === "m") {
       e.preventDefault();
       app.showMemory = !app.showMemory;
@@ -133,6 +149,27 @@
       </div>
     {/if}
 
+    {#if app.chatSearchOpen}
+      <div class="findbar">
+        <input
+          autofocus
+          bind:value={app.chatQuery}
+          placeholder={t("find.placeholder")}
+          oninput={() => (app.chatHitIndex = 0)}
+          onkeydown={(e) => {
+            if (e.key === "Enter") app.stepChatHit(e.shiftKey ? -1 : 1);
+            if (e.key === "Escape") app.closeChatSearch();
+          }}
+        />
+        <span class="count">
+          {app.chatHits.length ? app.chatHitIndex + 1 : 0}/{app.chatHits.length}
+        </span>
+        <button class="mini" onclick={() => app.stepChatHit(-1)}>↑</button>
+        <button class="mini" onclick={() => app.stepChatHit(1)}>↓</button>
+        <button class="mini" onclick={() => app.closeChatSearch()}>×</button>
+      </div>
+    {/if}
+
     <div class="chat" bind:this={scroller} onscroll={onScroll}>
       {#if app.messages.length === 0}
         <div class="welcome">
@@ -149,8 +186,14 @@
           </div>
         </div>
       {:else}
-        {#each app.messages as msg (msg.key)}
-          <Message {msg} />
+        {#each app.messages as msg, i (msg.key)}
+          <div
+            class="anchor"
+            data-msg={msg.key}
+            class:hit={app.chatSearchOpen && app.chatHits[app.chatHitIndex] === msg.key}
+          >
+            <Message {msg} />
+          </div>
         {/each}
       {/if}
     </div>
@@ -159,6 +202,13 @@
       <button class="jump" onclick={scrollToBottom}>↓</button>
     {/if}
 
+    {#if app.active?.canContinue}
+      <div class="continuebar">
+        <span>✂ {t("cont.title")}</span>
+        <button class="mini primary" onclick={() => app.continueLastTurn()}>{t("cont.action")}</button>
+        <button class="mini" onclick={() => (app.active!.canContinue = false)}>×</button>
+      </div>
+    {/if}
     <ProcBar />
     <Composer focusToken={app.focusToken} />
   </main>
@@ -193,6 +243,19 @@
     display: flex;
     gap: 10px;
     align-items: center;
+  }
+  .continuebar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 14px;
+    border-top: 1px solid var(--border-soft);
+    background: #1b2130;
+    color: var(--text-dim);
+    font-size: 11.5px;
+  }
+  .continuebar span {
+    flex: 1;
   }
   .banner.danger {
     background: #35171a;

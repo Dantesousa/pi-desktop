@@ -14,6 +14,7 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import path from "node:path";
 
 const MODE = (process.env.PI_DESKTOP_GATE ?? "dangerous").toLowerCase();
+const REVIEW_EDITS = (process.env.PI_DESKTOP_REVIEW_EDITS ?? "1") !== "0";
 
 const DANGEROUS = [
   /\brm\s+(-[a-z]*[rf][a-z]*|--recursive|--force)/i,
@@ -39,6 +40,31 @@ function outsideWorkspace(target: string, cwd: string): boolean {
   return !roots.some((r) => abs === r || abs.startsWith(r + path.sep));
 }
 
+/** Compact preview of what a write/edit is about to change. */
+function changePreview(name: string, input: Record<string, any>): string {
+  const cap = (lines: string[], n: number) =>
+    lines.length > n ? [...lines.slice(0, n), `… (+${lines.length - n} lines)`] : lines;
+
+  if (name === "write") {
+    const content = String(input.content ?? "");
+    const lines = content.split("\n");
+    return cap(lines, 24)
+      .map((l) => `+ ${l}`)
+      .join("\n");
+  }
+
+  const edits: any[] = Array.isArray(input.edits) ? input.edits : [];
+  const out: string[] = [];
+  for (const e of edits.slice(0, 3)) {
+    const oldLines = String(e.oldText ?? "").split("\n");
+    const newLines = String(e.newText ?? "").split("\n");
+    out.push(...cap(oldLines, 12).map((l) => `- ${l}`));
+    out.push(...cap(newLines, 12).map((l) => `+ ${l}`));
+  }
+  if (edits.length > 3) out.push(`… (+${edits.length - 3} edits)`);
+  return out.join("\n");
+}
+
 export default function (pi: ExtensionAPI) {
   if (MODE === "off") return;
 
@@ -58,6 +84,25 @@ export default function (pi: ExtensionAPI) {
         reason = "bash (mode: approve all)";
         detail = command;
       }
+    }
+
+    // review file changes with a diff before they are applied
+    if (!reason && REVIEW_EDITS && WRITE_TOOLS.has(name) && !allowAll) {
+      const target = String(input.path ?? "");
+      const body = changePreview(name, input).slice(0, 2400);
+      if (!ctx.hasUI) {
+        return { block: true, reason: "cannot show the diff without a UI" };
+      }
+      const choice = await ctx.ui.select(
+        `${name === "write" ? "Create/overwrite" : "Edit"} ${target}\n\n${body}`,
+        ["Apply", "Apply all, stop asking", "Skip"],
+      );
+      if (choice === "Apply") return undefined;
+      if (choice === "Apply all, stop asking") {
+        allowAll = true;
+        return undefined;
+      }
+      return { block: true, reason: "change skipped by the user" };
     }
 
     if (!reason && WRITE_TOOLS.has(name) && MODE !== "all") {

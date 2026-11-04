@@ -575,3 +575,63 @@ pub fn skill_sync(slug: &str) -> Result<String, String> {
         Ok(format!("{changed} file(s) updated"))
     }
 }
+
+#[derive(Serialize, Clone)]
+pub struct SkillDiff {
+    pub path: String,
+    pub status: String, // added | changed | removed
+}
+
+/// Compares the local skill directory with its source repo without writing anything.
+pub fn skill_preview(slug: &str) -> Result<Vec<SkillDiff>, String> {
+    let src = read_source(slug)
+        .ok_or_else(|| "this skill did not come from a hub (no .source.json)".to_string())?;
+    let repo = src.get("repo").and_then(|v| v.as_str()).unwrap_or("");
+    let dir = src.get("dir").and_then(|v| v.as_str()).unwrap_or("");
+    if repo.is_empty() {
+        return Err("unknown origin".into());
+    }
+    let known: Vec<(String, String)> = src
+        .get("files")
+        .and_then(|v| v.as_array())
+        .map(|a| {
+            a.iter()
+                .filter_map(|f| {
+                    Some((
+                        f.get("path")?.as_str()?.to_string(),
+                        f.get("hash")?.as_str()?.to_string(),
+                    ))
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+
+    let branch = default_branch(repo)?;
+    let mut remote: Vec<(String, String)> = Vec::new();
+    let mut files: Vec<(String, String)> = Vec::new();
+    collect_files(repo, dir.trim_end_matches('/'), &branch, 0, &mut files)?;
+    let prefix = if dir.is_empty() { String::new() } else { format!("{}/", dir.trim_end_matches('/')) };
+    for (path, url) in files {
+        let rel = path.strip_prefix(&prefix).unwrap_or(&path).to_string();
+        if rel.is_empty() {
+            continue;
+        }
+        let body = curl(&url)?;
+        remote.push((rel, fnv1a(body.as_bytes())));
+    }
+
+    let mut out = Vec::new();
+    for (path, hash) in &remote {
+        match known.iter().find(|(p, _)| p == path) {
+            Some((_, old)) if old == hash => {}
+            Some(_) => out.push(SkillDiff { path: path.clone(), status: "changed".into() }),
+            None => out.push(SkillDiff { path: path.clone(), status: "added".into() }),
+        }
+    }
+    for (path, _) in &known {
+        if !remote.iter().any(|(p, _)| p == path) {
+            out.push(SkillDiff { path: path.clone(), status: "removed".into() });
+        }
+    }
+    Ok(out)
+}

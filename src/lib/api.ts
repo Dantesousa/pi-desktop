@@ -96,6 +96,7 @@ export const api = {
   hubSkillsDir: () => invoke<string>("hub_skills_dir"),
   hubSkillsSources: async () => camel(await invoke<any[]>("hub_skills_sources")),
   hubSkillSync: (slug: string) => invoke<string>("hub_skill_sync", { slug }),
+  hubSkillPreview: async (slug: string) => camel(await invoke<any[]>("hub_skill_preview", { slug })),
 
   // attachments
   attachmentRead: async (path: string) => camel(await invoke<any>("attachment_read", { path })),

@@ -295,6 +295,11 @@ fn hub_skills_sources() -> Vec<hub::SkillSource> {
 }
 
 #[tauri::command]
+fn hub_skill_preview(slug: String) -> Result<Vec<hub::SkillDiff>, String> {
+    hub::skill_preview(&slug)
+}
+
+#[tauri::command]
 fn hub_skill_sync(slug: String) -> Result<String, String> {
     hub::skill_sync(&slug)
 }
@@ -502,6 +507,7 @@ pub fn run() {
             hub_skill_install,
             hub_skills_dir,
             hub_skills_sources,
+            hub_skill_preview,
             hub_skill_sync,
             attachment_read,
             attachment_stage,
